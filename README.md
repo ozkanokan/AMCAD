@@ -8,10 +8,12 @@ optimization.
 
 ## Setup and run
 
-Python 3.10+ is required; Python 3.12 and PySide6 6.8.3 were tested on Linux.
-Run commands from the repository root.
+The target runtime is **Python 3.14.4**, pinned in `.python-version`.
+Dependencies are pinned to PySide6 6.11.2 and pytest 9.1.1, which support
+Python 3.14. Run commands from the repository root with Python 3.14.4 installed.
 
 ```bash
+python --version  # Must report Python 3.14.4
 python -m venv .venv
 # Linux/macOS
 source .venv/bin/activate
@@ -22,8 +24,15 @@ python -m app.main
 python -m app.main examples/c1_r.amcad.json
 ```
 
+For an existing installation, recreate the disposable `.venv` with Python
+3.14.4 before installing the updated requirements; upgrading packages alone
+does not change the virtual environment's Python runtime. If you use `uv`,
+`uv python install 3.14.4` installs the pinned runtime and
+`uv venv --python 3.14.4 .venv` creates a new environment.
+
 A normal desktop session is required for interactive use. On Linux, Qt also
-needs the platform's display libraries. For headless CI and cloud validation:
+needs the platform's display libraries; the pinned PySide6 Linux x86_64 wheels
+require glibc 2.34 or newer. For headless CI and cloud validation:
 
 ```bash
 python -m pip install -r requirements-dev.txt
@@ -34,8 +43,10 @@ QT_QPA_PLATFORM=offscreen python -m app.main examples/c1_r.amcad.json --smoke
 `--smoke` opens and renders the actual application, then exits. It does not
 replace the functional tests. The Qt tests exercise the wizard, port clicks,
 drag/drop placement, component movement, rotation, properties, editing controls,
-project reopening and graph export. Offscreen validation cannot establish the
-behavior of a native Windows/macOS display or executable bundle.
+project reopening and graph export. All 11 existing tests and the application
+launch check pass on Linux with Python 3.14.4, PySide6 6.11.2 and pytest 9.1.1;
+the V1 application code and test suite are unchanged. Offscreen validation
+cannot establish the behavior of a native Windows/macOS display or executable bundle.
 
 ## Editing
 

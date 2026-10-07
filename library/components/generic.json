@@ -1,0 +1,86 @@
+[
+  {
+    "id": "external-port",
+    "name": "External Port",
+    "prefix": "EXT",
+    "category": "Interfaces",
+    "symbol": {
+      "kind": "external",
+      "width": 40,
+      "height": 40
+    },
+    "ports": [
+      {
+        "id": "port",
+        "display_name": "Port",
+        "port_type": "HYDRAULIC",
+        "flow_direction": "UNSPECIFIED",
+        "side": "RIGHT"
+      }
+    ]
+  },
+  {
+    "id": "generic-2",
+    "name": "2-Port Generic",
+    "prefix": "G",
+    "category": "Generic",
+    "ports": [
+      {
+        "id": "i",
+        "display_name": "IN",
+        "side": "LEFT"
+      },
+      {
+        "id": "o",
+        "display_name": "OUT",
+        "side": "RIGHT"
+      }
+    ]
+  },
+  {
+    "id": "generic-4",
+    "name": "4-Port Generic",
+    "prefix": "G4",
+    "category": "Generic",
+    "ports": [
+      {
+        "id": "P",
+        "display_name": "P",
+        "side": "TOP"
+      },
+      {
+        "id": "R",
+        "display_name": "R",
+        "side": "BOTTOM"
+      },
+      {
+        "id": "C1",
+        "display_name": "C1",
+        "side": "LEFT"
+      },
+      {
+        "id": "C2",
+        "display_name": "C2",
+        "side": "RIGHT"
+      }
+    ]
+  },
+  {
+    "id": "junction",
+    "name": "Junction",
+    "prefix": "J",
+    "category": "Connectivity",
+    "symbol": {
+      "kind": "junction",
+      "width": 20,
+      "height": 20
+    },
+    "ports": [
+      {
+        "id": "j",
+        "display_name": "J",
+        "side": "RIGHT"
+      }
+    ]
+  }
+]

@@ -20,8 +20,8 @@ def create_demo():
     ret = p.add_instance(library.definitions['external-port'], 320, 170, 'R')
     e = p.add_instance(ehsv, 20, -100, 'EHSV1')
     r = p.add_instance(rv, 20, 170, 'RV1')
-    j = p.add_instance(library.definitions['junction'], -150, -60, 'J1')
-    for a, ap, b, bp in [(c1,'port',j,'j'),(j,'j',e,'C1'),(j,'j',r,'IN'),(r,'OUT',ret,'port'),(e,'R',ret,'port')]:
+    j = p.add_instance(library.definitions['junction-3'], -150, -60, 'J1')
+    for a, ap, b, bp in [(c1,'port',j,'LEFT'),(j,'RIGHT',e,'C1'),(j,'BOTTOM',r,'IN'),(r,'OUT',ret,'port'),(e,'R',ret,'port')]:
         p.connect(p.node_for(a.id,ap).id, p.node_for(b.id,bp).id)
     return p
 

@@ -3,7 +3,7 @@ from PySide6.QtCore import QPointF
 
 def port_positions(definition):
     kind = definition.symbol.get('kind', 'box')
-    if kind in {'junction', 'external'}:
+    if kind == 'external':
         return {definition.ports[0].id: QPointF(0, 0)}
     w = definition.symbol.get('width', 110)
     h = definition.symbol.get('height', 76)

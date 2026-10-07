@@ -66,21 +66,127 @@
     ]
   },
   {
-    "id": "junction",
-    "name": "Junction",
+    "id": "junction-3",
+    "name": "3-Way Junction",
     "prefix": "J",
     "category": "Connectivity",
-    "symbol": {
-      "kind": "junction",
-      "width": 20,
-      "height": 20
-    },
     "ports": [
       {
-        "id": "j",
-        "display_name": "J",
-        "side": "RIGHT"
+        "id": "LEFT",
+        "display_name": "Left",
+        "port_type": "HYDRAULIC",
+        "flow_direction": "BIDIRECTIONAL",
+        "side": "LEFT",
+        "local_position_xyz": null,
+        "local_direction_xyz": null
+      },
+      {
+        "id": "RIGHT",
+        "display_name": "Right",
+        "port_type": "HYDRAULIC",
+        "flow_direction": "BIDIRECTIONAL",
+        "side": "RIGHT",
+        "local_position_xyz": null,
+        "local_direction_xyz": null
+      },
+      {
+        "id": "BOTTOM",
+        "display_name": "Bottom",
+        "port_type": "HYDRAULIC",
+        "flow_direction": "BIDIRECTIONAL",
+        "side": "BOTTOM",
+        "local_position_xyz": null,
+        "local_direction_xyz": null
       }
-    ]
+    ],
+    "symbol": {
+      "kind": "junction",
+      "width": 40,
+      "height": 40
+    },
+    "internal_relationships": [
+      {
+        "from_port_id": "LEFT",
+        "to_port_id": "RIGHT",
+        "relationship": "JUNCTION"
+      },
+      {
+        "from_port_id": "LEFT",
+        "to_port_id": "BOTTOM",
+        "relationship": "JUNCTION"
+      }
+    ],
+    "component_cad_path": null,
+    "cavity_cad_path": null,
+    "keepout_cad_path": null
+  },
+  {
+    "id": "junction-4",
+    "name": "4-Way Junction",
+    "prefix": "J",
+    "category": "Connectivity",
+    "ports": [
+      {
+        "id": "LEFT",
+        "display_name": "Left",
+        "port_type": "HYDRAULIC",
+        "flow_direction": "BIDIRECTIONAL",
+        "side": "LEFT",
+        "local_position_xyz": null,
+        "local_direction_xyz": null
+      },
+      {
+        "id": "RIGHT",
+        "display_name": "Right",
+        "port_type": "HYDRAULIC",
+        "flow_direction": "BIDIRECTIONAL",
+        "side": "RIGHT",
+        "local_position_xyz": null,
+        "local_direction_xyz": null
+      },
+      {
+        "id": "BOTTOM",
+        "display_name": "Bottom",
+        "port_type": "HYDRAULIC",
+        "flow_direction": "BIDIRECTIONAL",
+        "side": "BOTTOM",
+        "local_position_xyz": null,
+        "local_direction_xyz": null
+      },
+      {
+        "id": "TOP",
+        "display_name": "Top",
+        "port_type": "HYDRAULIC",
+        "flow_direction": "BIDIRECTIONAL",
+        "side": "TOP",
+        "local_position_xyz": null,
+        "local_direction_xyz": null
+      }
+    ],
+    "symbol": {
+      "kind": "junction",
+      "width": 40,
+      "height": 40
+    },
+    "internal_relationships": [
+      {
+        "from_port_id": "LEFT",
+        "to_port_id": "RIGHT",
+        "relationship": "JUNCTION"
+      },
+      {
+        "from_port_id": "LEFT",
+        "to_port_id": "BOTTOM",
+        "relationship": "JUNCTION"
+      },
+      {
+        "from_port_id": "LEFT",
+        "to_port_id": "TOP",
+        "relationship": "JUNCTION"
+      }
+    ],
+    "component_cad_path": null,
+    "cavity_cad_path": null,
+    "keepout_cad_path": null
   }
 ]

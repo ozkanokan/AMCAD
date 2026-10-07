@@ -7,3 +7,7 @@ class Connection:
     from_node_id: str
     to_node_id: str
     id: str = field(default_factory=new_id)
+    from_component_instance_id: str | None = None
+    from_port_id: str | None = None
+    to_component_instance_id: str | None = None
+    to_port_id: str | None = None

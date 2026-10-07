@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QGraphicsPathItem, QGraphicsItem
 from PySide6.QtGui import QPainterPath, QPainterPathStroker, QPen, QColor
+from core.geometry import rotated_side, wire_points
 
 
 class ConnectionItem(QGraphicsPathItem):
@@ -13,13 +14,14 @@ class ConnectionItem(QGraphicsPathItem):
         self.update_path()
 
     def update_path(self):
-        a = self.canvas.port_items[self.connection.from_node_id].scenePos()
-        b = self.canvas.port_items[self.connection.to_node_id].scenePos()
+        source = self.canvas.port_items[self.connection.from_node_id]
+        target = self.canvas.port_items[self.connection.to_node_id]
+        a, b = source.scenePos(), target.scenePos()
+        a_side = rotated_side(source.side, source.parentItem().instance.rotation)
+        b_side = rotated_side(target.side, target.parentItem().instance.rotation)
         path = QPainterPath(a)
-        mid = (a.x()+b.x())/2
-        path.lineTo(mid, a.y())
-        path.lineTo(mid, b.y())
-        path.lineTo(b)
+        for x, y in wire_points((a.x(), a.y()), a_side, (b.x(), b.y()), b_side)[1:]:
+            path.lineTo(x, y)
         self.setPath(path)
 
     def shape(self):

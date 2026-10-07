@@ -48,12 +48,12 @@ def test_full_desktop_acceptance(qapp,tmp_path):
     window.library.save(ehsv); window.library.save(rv); window.refresh_library()
     assert ehsv.id in ComponentLibrary(tmp_path/'library').definitions
     for definition,x,y in [('external-port',-300,-60),('external-port',320,170),
-                            (ehsv.id,20,-100),(rv.id,20,170),('junction',-150,-60)]:
+                            (ehsv.id,20,-100),(rv.id,20,170),('junction-3',-150,-60)]:
         window.place(definition,x,y)
     c1,ret,e,r,j=list(window.project.instances.values())
     window.project.rename(c1.id,'C1'); window.project.rename(ret.id,'R')
     window.view.rebuild(); window.record_change(); window.view.fit_content(); qapp.processEvents()
-    for a,ap,b,bp in [(c1,'port',j,'j'),(j,'j',e,'C1'),(j,'j',r,'IN'),(r,'OUT',ret,'port'),(e,'R',ret,'port')]:
+    for a,ap,b,bp in [(c1,'port',j,'LEFT'),(j,'RIGHT',e,'C1'),(j,'BOTTOM',r,'IN'),(r,'OUT',ret,'port'),(e,'R',ret,'port')]:
         click_port(window,window.project.node_for(a.id,ap).id,qapp)
         click_port(window,window.project.node_for(b.id,bp).id,qapp)
     assert len(window.project.connections)==5
@@ -88,9 +88,10 @@ def test_full_desktop_acceptance(qapp,tmp_path):
     assert len(reopened.view.component_items)==5 and len(reopened.view.wires)==5
     reopened.export_to(tmp_path/'graph.json')
     graph=json.loads((tmp_path/'graph.json').read_text())
-    assert len(graph['nodes'])==9 and len(graph['junctions'])==1
+    assert len(graph['nodes'])==11 and len(graph['junctions'])==3
+    assert len(graph['junction_instances'])==1
     assert len(graph['routing_connections'])==5
-    assert len(graph['component_internal_relationships'])==1
+    assert len(graph['component_internal_relationships'])==3
     assert {n['label'] for n in graph['nodes']} >= {'C1','R','EHSV1.C1','RV1.IN'}
     reopened.grab().save('/tmp/amcad-acceptance.png')
     reopened.close()

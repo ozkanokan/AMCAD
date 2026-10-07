@@ -4,10 +4,11 @@ from PySide6.QtGui import QPen, QColor, QBrush
 
 
 class PortItem(QGraphicsEllipseItem):
-    def __init__(self, node_id, label, parent, canvas):
+    def __init__(self, node_id, label, parent, canvas, side):
         super().__init__(-5, -5, 10, 10, parent)
         self.node_id = node_id
         self.canvas = canvas
+        self.side = side
         self.setPen(QPen(QColor('#17657a'), 1.6))
         self.idle_color = '#23465c' if parent.kind == 'junction' else '#ffffff'
         self.setBrush(QBrush(QColor(self.idle_color)))

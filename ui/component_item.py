@@ -24,12 +24,12 @@ class ComponentItem(QGraphicsItem):
         label = QGraphicsSimpleTextItem(instance.name, self)
         label.setFont(QFont('Sans Serif', 10, QFont.DemiBold))
         label.setBrush(QColor('#233847'))
-        label.setPos(-label.boundingRect().width()/2, self.h/2+14 if self.kind=='box' else 16)
+        label.setPos(-label.boundingRect().width()/2, self.h/2+14 if self.kind in {'box', 'junction'} else 16)
         label.setFlag(QGraphicsItem.ItemIgnoresTransformations)
         self.ports = {}
         for p in definition.ports:
             node = canvas.project.node_for(instance.id, p.id)
-            port = PortItem(node.id, f'{instance.name}.{p.id}', self, canvas)
+            port = PortItem(node.id, f'{instance.name}.{p.id}', self, canvas, p.side)
             port.setPos(port_positions(definition)[p.id])
             self.ports[node.id] = port
             if self.kind == 'box':
@@ -53,6 +53,8 @@ class ComponentItem(QGraphicsItem):
         painter.setPen(QPen(QColor('#168c9d' if self.isSelected() else '#42576a'), 2 if self.isSelected() else 1.5))
         painter.setBrush(QBrush(QColor('#e8f6f7' if self.isSelected() else '#ffffff')))
         if self.kind=='junction':
+            for port in self.ports.values():
+                painter.drawLine(0, 0, int(port.pos().x()), int(port.pos().y()))
             painter.setBrush(QColor('#23465c'))
             painter.drawEllipse(QRectF(-6,-6,12,12))
         elif self.kind=='external':
@@ -66,6 +68,9 @@ class ComponentItem(QGraphicsItem):
         if self.ready and change == QGraphicsItem.ItemPositionHasChanged:
             self.instance.x = value.x()
             self.instance.y = value.y()
+            self.canvas.update_wires()
+        if self.ready and change == QGraphicsItem.ItemRotationHasChanged:
+            self.instance.rotation = int(value) % 360
             self.canvas.update_wires()
         return super().itemChange(change, value)
 

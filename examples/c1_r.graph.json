@@ -1,6 +1,6 @@
 {
   "schema": "amcad.hydraulic_graph",
-  "schema_version": 1,
+  "schema_version": 2,
   "project": {
     "id": "8ed58e59-53ae-49fe-a65f-57fb1521029d",
     "name": "C1\u2013R hydraulic architecture"
@@ -33,8 +33,8 @@
     {
       "id": "0ed61957-1629-430a-8868-8f2cf4110373",
       "name": "J1",
-      "definition_id": "junction",
-      "definition_name": "Junction"
+      "definition_id": "717dac37-90ea-5357-8734-8cd35651f8a1",
+      "definition_name": "3-Way Junction"
     }
   ],
   "nodes": [
@@ -113,35 +113,79 @@
     {
       "id": "b97adc84-935f-4364-b473-3e4b29a1adc2",
       "instance_id": "0ed61957-1629-430a-8868-8f2cf4110373",
-      "port_id": "j",
+      "port_id": "LEFT",
       "kind": "junction",
-      "label": "J1",
+      "label": "J1.LEFT",
       "port_type": "HYDRAULIC",
-      "flow_direction": "UNSPECIFIED"
+      "flow_direction": "BIDIRECTIONAL"
+    },
+    {
+      "id": "80678b4d-ed37-5169-9b88-4be783072147",
+      "instance_id": "0ed61957-1629-430a-8868-8f2cf4110373",
+      "port_id": "RIGHT",
+      "kind": "junction",
+      "label": "J1.RIGHT",
+      "port_type": "HYDRAULIC",
+      "flow_direction": "BIDIRECTIONAL"
+    },
+    {
+      "id": "efb447c7-b477-50ec-ad6a-f0c7ee9b30d9",
+      "instance_id": "0ed61957-1629-430a-8868-8f2cf4110373",
+      "port_id": "BOTTOM",
+      "kind": "junction",
+      "label": "J1.BOTTOM",
+      "port_type": "HYDRAULIC",
+      "flow_direction": "BIDIRECTIONAL"
     }
   ],
   "junctions": [
-    "b97adc84-935f-4364-b473-3e4b29a1adc2"
+    "b97adc84-935f-4364-b473-3e4b29a1adc2",
+    "80678b4d-ed37-5169-9b88-4be783072147",
+    "efb447c7-b477-50ec-ad6a-f0c7ee9b30d9"
+  ],
+  "junction_instances": [
+    {
+      "id": "0ed61957-1629-430a-8868-8f2cf4110373",
+      "name": "J1",
+      "port_node_ids": [
+        "b97adc84-935f-4364-b473-3e4b29a1adc2",
+        "80678b4d-ed37-5169-9b88-4be783072147",
+        "efb447c7-b477-50ec-ad6a-f0c7ee9b30d9"
+      ],
+      "capacity": 3
+    }
   ],
   "routing_connections": [
     {
       "from_node_id": "5502493c-38c0-4ffe-a0e7-712ef5791ba0",
       "to_node_id": "b97adc84-935f-4364-b473-3e4b29a1adc2",
       "id": "1391ade7-e21c-48bf-bb78-6318e661a44e",
+      "from_component_instance_id": "6c26f28b-f556-4176-8bd2-9b774ed85aeb",
+      "from_port_id": "port",
+      "to_component_instance_id": "0ed61957-1629-430a-8868-8f2cf4110373",
+      "to_port_id": "LEFT",
       "requires_routing": true,
       "direction_semantics": "connectivity_only"
     },
     {
-      "from_node_id": "b97adc84-935f-4364-b473-3e4b29a1adc2",
+      "from_node_id": "80678b4d-ed37-5169-9b88-4be783072147",
       "to_node_id": "f3d1bd96-f387-4205-9015-ca4012cb8a5c",
       "id": "145d5890-924e-462c-a1ce-2e5d97a5f39f",
+      "from_component_instance_id": "0ed61957-1629-430a-8868-8f2cf4110373",
+      "from_port_id": "RIGHT",
+      "to_component_instance_id": "1e945c91-b65b-4ffc-a973-ec6cc42ed457",
+      "to_port_id": "C1",
       "requires_routing": true,
       "direction_semantics": "connectivity_only"
     },
     {
-      "from_node_id": "b97adc84-935f-4364-b473-3e4b29a1adc2",
+      "from_node_id": "efb447c7-b477-50ec-ad6a-f0c7ee9b30d9",
       "to_node_id": "1be2f389-7265-441d-b72d-9b202ca5446f",
       "id": "a4c7a966-9973-4382-9866-b33bb2f5ee95",
+      "from_component_instance_id": "0ed61957-1629-430a-8868-8f2cf4110373",
+      "from_port_id": "BOTTOM",
+      "to_component_instance_id": "40f582bf-5601-48d7-b24d-b71d7233fc5c",
+      "to_port_id": "IN",
       "requires_routing": true,
       "direction_semantics": "connectivity_only"
     },
@@ -149,6 +193,10 @@
       "from_node_id": "c22c2eb5-52e6-4819-9544-c526802b5de9",
       "to_node_id": "83f3ec56-85eb-406d-888d-51bd453d1c84",
       "id": "99d91e88-96a7-4789-80af-512981aeb0e5",
+      "from_component_instance_id": "40f582bf-5601-48d7-b24d-b71d7233fc5c",
+      "from_port_id": "OUT",
+      "to_component_instance_id": "3a7f1a5f-dcb2-4e09-bd27-8d2bdbd68e06",
+      "to_port_id": "port",
       "requires_routing": true,
       "direction_semantics": "connectivity_only"
     },
@@ -156,6 +204,10 @@
       "from_node_id": "32678f66-eb62-4478-a077-47277c155fb1",
       "to_node_id": "83f3ec56-85eb-406d-888d-51bd453d1c84",
       "id": "a04683bf-34c6-41cf-9534-ad3390c220ba",
+      "from_component_instance_id": "1e945c91-b65b-4ffc-a973-ec6cc42ed457",
+      "from_port_id": "R",
+      "to_component_instance_id": "3a7f1a5f-dcb2-4e09-bd27-8d2bdbd68e06",
+      "to_port_id": "port",
       "requires_routing": true,
       "direction_semantics": "connectivity_only"
     }
@@ -166,6 +218,18 @@
       "from_node_id": "1be2f389-7265-441d-b72d-9b202ca5446f",
       "to_node_id": "c22c2eb5-52e6-4819-9544-c526802b5de9",
       "relationship": "RELIEF_VALVE"
+    },
+    {
+      "component_instance_id": "0ed61957-1629-430a-8868-8f2cf4110373",
+      "from_node_id": "b97adc84-935f-4364-b473-3e4b29a1adc2",
+      "to_node_id": "80678b4d-ed37-5169-9b88-4be783072147",
+      "relationship": "JUNCTION"
+    },
+    {
+      "component_instance_id": "0ed61957-1629-430a-8868-8f2cf4110373",
+      "from_node_id": "b97adc84-935f-4364-b473-3e4b29a1adc2",
+      "to_node_id": "efb447c7-b477-50ec-ad6a-f0c7ee9b30d9",
+      "relationship": "JUNCTION"
     }
   ]
 }

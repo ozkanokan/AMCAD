@@ -31,8 +31,11 @@ class ComponentDefinition:
         kind = self.symbol.get("kind", "box")
         if kind not in {"box", "external", "junction"}:
             raise ValueError("Unsupported symbol kind")
-        if kind in {"external", "junction"} and len(ids) != 1:
-            raise ValueError("External ports and junctions each represent exactly one node")
+        if kind == "external" and len(ids) != 1:
+            raise ValueError("External ports each represent exactly one node")
+        if kind == "junction":
+            if len(ids) not in {3, 4} or len({p.side for p in self.ports}) != len(ids):
+                raise ValueError("Junctions need exactly 3 or 4 ports on distinct sides")
         for key in ("width", "height"):
             value = self.symbol.get(key, 110 if key == "width" else 76)
             if not isinstance(value, (int, float)) or not 20 <= value <= 1000:
@@ -40,6 +43,15 @@ class ComponentDefinition:
         for r in self.internal_relationships:
             if r.get("from_port_id") not in ids or r.get("to_port_id") not in ids:
                 raise ValueError("Internal relationship references an unknown port")
+        if kind == "junction":
+            reachable = {ids[0]}
+            for _ in ids:
+                for r in self.internal_relationships:
+                    if r.get("relationship") == "JUNCTION" and (
+                            r["from_port_id"] in reachable or r["to_port_id"] in reachable):
+                        reachable.update((r["from_port_id"], r["to_port_id"]))
+            if reachable != set(ids):
+                raise ValueError("All junction ports must be joined by internal JUNCTION relationships")
         return self
 
     def to_dict(self):

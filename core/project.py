@@ -10,7 +10,7 @@ from core.component_instance import ComponentInstance
 from core.connection import Connection
 from core.port import Node, new_id
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def write_json(path, data):
@@ -75,6 +75,17 @@ class Project:
     def node_for(self, instance_id, port_id):
         return next(n for n in self.nodes.values() if n.instance_id == instance_id and n.port_id == port_id)
 
+    def rotate(self, instance_id, degrees=90):
+        if degrees % 90:
+            raise ValueError("Rotation must be a multiple of 90 degrees")
+        instance = self.instances[instance_id]
+        instance.rotation = (instance.rotation + degrees) % 360
+
+    def _check_junction_port(self, node_id):
+        if self.nodes[node_id].kind == "junction" and any(
+                node_id in (c.from_node_id, c.to_node_id) for c in self.connections.values()):
+            raise ValueError("Junction port is occupied; choose a free port or a 4-Way Junction")
+
     def connect(self, a, b):
         if a not in self.nodes or b not in self.nodes:
             raise ValueError("Connection endpoint does not exist")
@@ -82,7 +93,13 @@ class Project:
             raise ValueError("Cannot connect a port to itself")
         if any({c.from_node_id, c.to_node_id} == {a, b} for c in self.connections.values()):
             raise ValueError("These ports are already connected")
-        c = Connection(a, b)
+        if self.nodes[a].instance_id == self.nodes[b].instance_id and self.nodes[a].kind == "junction":
+            raise ValueError("Junction ports are already internally connected")
+        self._check_junction_port(a)
+        self._check_junction_port(b)
+        source, target = self.nodes[a], self.nodes[b]
+        c = Connection(a, b, from_component_instance_id=source.instance_id, from_port_id=source.port_id,
+                       to_component_instance_id=target.instance_id, to_port_id=target.port_id)
         self.connections[c.id] = c
         return c
 
@@ -146,9 +163,21 @@ class Project:
             if n.kind != kind:
                 raise ValueError("Node kind disagrees with component definition")
         pairs = set()
+        occupied_junction_ports = set()
         for c in self.connections.values():
             if c.from_node_id not in self.nodes or c.to_node_id not in self.nodes or c.from_node_id == c.to_node_id:
                 raise ValueError("Invalid connection endpoints")
+            source, target = self.nodes[c.from_node_id], self.nodes[c.to_node_id]
+            if (c.from_component_instance_id, c.from_port_id, c.to_component_instance_id, c.to_port_id) != (
+                    source.instance_id, source.port_id, target.instance_id, target.port_id):
+                raise ValueError("Connection instance/port references disagree with node IDs")
+            if source.kind == "junction" and source.instance_id == target.instance_id:
+                raise ValueError("Junction ports are already internally connected")
+            for node in (source, target):
+                if node.kind == "junction":
+                    if node.id in occupied_junction_ports:
+                        raise ValueError("Junction port is occupied by multiple connections")
+                    occupied_junction_ports.add(node.id)
             pair = frozenset((c.from_node_id, c.to_node_id))
             if pair in pairs:
                 raise ValueError("Duplicate connection")
@@ -169,8 +198,11 @@ class Project:
     def from_dict(cls, data):
         if not isinstance(data, dict):
             raise ValueError("Project JSON must be an object")
-        if data.get("schema") != "amcad.project" or data.get("schema_version") != SCHEMA_VERSION:
+        if data.get("schema") != "amcad.project" or data.get("schema_version") not in (1, SCHEMA_VERSION):
             raise ValueError("Unsupported project schema/version")
+        if data["schema_version"] == 1:
+            from core.migration import migrate_v1
+            data = migrate_v1(data)
         p = cls()
         p.metadata = dict(data["project"])
         for key, target, constructor in (

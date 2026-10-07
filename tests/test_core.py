@@ -16,10 +16,11 @@ def test_acceptance_round_trip(tmp_path):
     assert reopened.to_dict() == p.to_dict()
     assert [(c.from_node_id,c.to_node_id) for c in reopened.connections.values()] == original_edges
     graph = export_graph(reopened)
-    assert len(graph['nodes']) == 9
+    assert len(graph['nodes']) == 11
     assert len(graph['routing_connections']) == 5
-    assert len(graph['junctions']) == 1
-    assert len(graph['component_internal_relationships']) == 1
+    assert len(graph['junctions']) == 3
+    assert len(graph['junction_instances']) == 1
+    assert len(graph['component_internal_relationships']) == 3
     assert graph['component_internal_relationships'][0]['relationship'] == 'RELIEF_VALVE'
     assert any(n['label']=='Relief1.IN' for n in graph['nodes'])
 
@@ -31,7 +32,7 @@ def test_delete_copy_duplicate_and_undo_snapshot():
     with pytest.raises(ValueError): p.connect(edge.from_node_id,edge.from_node_id)
     ids = p.paste_subgraph(p.copy_subgraph(p.instances))
     assert len(ids)==5 and len(p.connections)==10
-    assert len(p.nodes)==18
+    assert len(p.nodes)==22
     p.remove_instance(ids[0]); p.validate()
     assert Project.from_dict(before).to_dict()==before
 

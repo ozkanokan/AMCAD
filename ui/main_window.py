@@ -59,7 +59,8 @@ class MainWindow(QMainWindow):
             (component_menu,'create','New Component…','Ctrl+Shift+N',self.new_component),
             (component_menu,'rename','Properties / Rename…','F2',self.selected_properties),
             (component_menu,'rotate','Rotate 90°','Ctrl+R',self.rotate_selection),
-            (component_menu,'junction','Add Junction','Ctrl+J',self.add_junction),
+            (component_menu,'junction','Add 3-Way Junction','Ctrl+J',self.add_junction),
+            (component_menu,'junction4','Add 4-Way Junction','Ctrl+Shift+J',lambda:self.add_junction(4)),
             (view_menu,'fit','Fit Schematic','F',self.view.fit_content),
             (view_menu,'zoom_in','Zoom In','Ctrl++',lambda:self.view.zoom(1.15)),
             (view_menu,'zoom_out','Zoom Out','Ctrl+-',lambda:self.view.zoom(1/1.15)),
@@ -108,10 +109,12 @@ class MainWindow(QMainWindow):
         pos = self.view.mapToScene(self.view.viewport().rect().center())
         self.place(item.data(Qt.UserRole),pos.x(),pos.y())
 
-    def add_junction(self):
+    def add_junction(self, ways=3):
+        # QAction passes its checked flag; retain the default three-way shortcut.
+        if isinstance(ways, bool): ways = 3
         pos = self.view.mapToScene(self.view.viewport().rect().center())
-        self.place('junction',pos.x(),pos.y())
-        self.statusBar().showMessage('Connect each branch to the junction dot. Crossing wires are not connected.')
+        self.place(f'junction-{ways}',pos.x(),pos.y())
+        self.statusBar().showMessage('Connect each branch to a free junction port. Crossing wires are not connected.')
 
     def delete_selection(self):
         instance_ids = self.view.selected_instances()
@@ -123,7 +126,7 @@ class MainWindow(QMainWindow):
     def rotate_selection(self):
         ids = self.view.selected_instances()
         for instance_id in ids:
-            i = self.project.instances[instance_id]; i.rotation=(i.rotation+90)%360
+            self.project.rotate(instance_id)
         self.view.rebuild(ids); self.record_change()
 
     def select_all(self):

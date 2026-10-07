@@ -1,0 +1,144 @@
+{
+  "id": "illustrative-check-valve",
+  "name": "Illustrative Check Valve",
+  "prefix": "CV",
+  "category": "Valves",
+  "ports": [
+    {
+      "id": "IN",
+      "display_name": "IN",
+      "port_type": "HYDRAULIC",
+      "flow_direction": "IN",
+      "side": "LEFT",
+      "local_position_xyz": null,
+      "local_direction_xyz": null,
+      "required": true
+    },
+    {
+      "id": "OUT",
+      "display_name": "OUT",
+      "port_type": "HYDRAULIC",
+      "flow_direction": "OUT",
+      "side": "RIGHT",
+      "local_position_xyz": null,
+      "local_direction_xyz": null,
+      "required": true
+    }
+  ],
+  "symbol": {
+    "kind": "box",
+    "width": 200,
+    "height": 76
+  },
+  "internal_relationships": [
+    {
+      "from_port_id": "IN",
+      "to_port_id": "OUT",
+      "relationship": "CHECK_VALVE"
+    }
+  ],
+  "component_cad_path": null,
+  "cavity_cad_path": null,
+  "keepout_cad_path": null,
+  "physical": {
+    "cavity_type": "REVOLVED_PROFILE",
+    "cavity_profile": {
+      "vertices": [
+        {
+          "z": 0,
+          "r": 7,
+          "id": "a74a6773-478a-4720-87e1-94bd02114ea1",
+          "corner": {
+            "type": "SHARP",
+            "radius_mm": null,
+            "length_mm": null,
+            "angle_deg": null
+          }
+        },
+        {
+          "z": 8,
+          "r": 7,
+          "id": "539c1605-9782-439b-a938-457f48c1556b",
+          "corner": {
+            "type": "FILLET",
+            "radius_mm": 0.5,
+            "length_mm": null,
+            "angle_deg": null
+          }
+        },
+        {
+          "z": 8,
+          "r": 5,
+          "id": "4f64d645-bc2f-4580-b467-198cd1ef9421",
+          "corner": {
+            "type": "SHARP",
+            "radius_mm": null,
+            "length_mm": null,
+            "angle_deg": null
+          }
+        },
+        {
+          "z": 20,
+          "r": 5,
+          "id": "9f42720b-dcdc-4fd6-a163-38b407ed1bd4",
+          "corner": {
+            "type": "CHAMFER",
+            "radius_mm": null,
+            "length_mm": 0.4,
+            "angle_deg": 45
+          }
+        },
+        {
+          "z": 20,
+          "r": 3,
+          "id": "b0e5ce5d-d488-4a66-bb8c-223d779e8af3",
+          "corner": {
+            "type": "SHARP",
+            "radius_mm": null,
+            "length_mm": null,
+            "angle_deg": null
+          }
+        },
+        {
+          "z": 28,
+          "r": 3,
+          "id": "a76e4ab2-c89b-46cf-bda0-ce1836d976a6",
+          "corner": {
+            "type": "SHARP",
+            "radius_mm": null,
+            "length_mm": null,
+            "angle_deg": null
+          }
+        }
+      ],
+      "id": "228aa0af-cc77-4edf-a667-2b7a1dbd0c43",
+      "schema_version": 1,
+      "units": "mm",
+      "datum": {
+        "mounting_face_z_mm": 0,
+        "positive_z": "DEPTH_INTO_MANIFOLD",
+        "revolve_axis_r_mm": 0
+      }
+    },
+    "hydraulic_interfaces": [
+      {
+        "hydraulic_port_id": "IN",
+        "interface_type": "AXIAL",
+        "z_mm": 28,
+        "r_mm": 0,
+        "nominal_connection_diameter_mm": 4,
+        "preferred_direction": "AXIAL_POSITIVE",
+        "id": "c430e946-12f0-4c5c-baeb-3ed31d33cbff"
+      },
+      {
+        "hydraulic_port_id": "OUT",
+        "interface_type": "RADIAL",
+        "z_mm": 14.5,
+        "r_mm": 5,
+        "nominal_connection_diameter_mm": 4,
+        "preferred_direction": "RADIAL",
+        "id": "c900ccd2-e607-4698-89e5-e1487cdd61d3"
+      }
+    ]
+  }
+}

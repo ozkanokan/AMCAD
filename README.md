@@ -1,10 +1,11 @@
-# AMCAD — Hydraulic Manifold Schematic Editor (V1.2)
+# AMCAD — Hydraulic Manifold Schematic Editor (V1.3)
 
 A standalone Python / PySide6 desktop editor for hydraulic schematics and their
-graph foundation. V1.2 adds manual orthogonal line drawing/editing, one line per
-port, crossing jumps and required-port feedback. It includes a component wizard,
-JSON projects, undo/redo and graph export. No CAD, simulation, physical manifold
-routing, hydraulic calculations, 3D or optimization is implemented.
+graph foundation. V1.3 adds a dedicated parametric axisymmetric cavity sketcher,
+physical hydraulic-interface mappings and a mirrored cross-section preview.
+Existing manual line editing, component wizard, JSON projects, undo/redo and
+graph export remain available. No CAD kernel, physical manifold routing,
+hydraulic simulation or 3D geometry generation is implemented.
 
 ## Setup and run
 
@@ -36,10 +37,12 @@ QT_QPA_PLATFORM=offscreen python -m pytest -q
 QT_QPA_PLATFORM=offscreen python -m app.main examples/c1_r.amcad.json --smoke
 ```
 
-All **159 tests** and the application launch check pass on Python 3.14.4 under
+All **184 tests** and both sample application launch checks pass on Python 3.14.4 under
 Linux. Tests exercise the wizard, drag/drop, manual drawing, segment and bend
 drags, rotation, single-line occupancy, geometry persistence, undo/redo,
-copy/paste, legacy migration, completeness, crossings and graph export.
+copy/paste, legacy migration, completeness, crossings and graph export. Cavity tests cover
+point editing, snap, exact corner features, validation, port mappings, shared
+definitions, library/project persistence and GUI save/reopen.
 `--smoke` renders the actual window and exits. Native Windows/macOS displays and
 executable packaging have not been validated.
 
@@ -105,13 +108,61 @@ and junctions; it does not interrupt editing with dialogs.
 
 Optional internal relationships identify two definition port IDs and a relationship
 type. These stay separate from physical routing connections and do not simulate
-hydraulics. Future CAD paths and port geometry are reserved empty metadata.
+hydraulics. Cavity interface mappings are separate physical metadata; future CAD paths
+remain reserved.
 
 Custom definitions are JSON files under `$XDG_DATA_HOME/amcad/components`, or
 `~/.local/share/amcad/components`. On Windows, set `XDG_DATA_HOME` to a preferred
 writable data directory if desired. Projects embed their definitions, and their
 embedded definitions become available in the panel when opened. Invalid custom
 library files are reported in the status bar while valid files remain usable.
+
+## Axisymmetric cavity sketcher
+
+In **+ New Component**, configure schematic port IDs first, then click **Cavity
+Profile…**. To edit an existing definition, select its placed component or library
+entry and choose **Component → Edit Definition Cavity…** (Ctrl+Shift+C), or use
+the component properties dialog. The cavity belongs to the reusable definition:
+all instances share one profile and the same schematic port identities.
+
+- Choose NONE or REVOLVED_PROFILE. Click **Add Point**, then click in the dedicated
+  sketch to append ordered Z/R points. Select/drag points, insert after selection,
+  or delete. Numeric Z/R edits update immediately and bypass grid snapping.
+- Units are mm; R is nonnegative. R=0 is the fixed revolve axis; Z=0 is the mounting
+  face and positive Z is depth into the manifold. Snap offers OFF, 0.1, 0.5 and 1 mm.
+- Select an internal point, choose FILLET radius or CHAMFER length/angle, and Apply.
+  SHARP removes its treatment while retaining its vertex ID. Invalid corner edits
+  leave the previous feature intact. VALID/INVALID feedback explains profile errors.
+- **Place Interface** adds a distinct marker mapped to an existing schematic port
+  ID. Set AXIAL/RADIAL, Z/R, nominal diameter and preferred direction. Duplicate or
+  nonexistent port mappings are rejected; missing required mappings produce warnings.
+- **Revolve Preview** mirrors the section around R=0. It does not generate a solid.
+  Save/reopen preserves exact vertices, UUIDs, corner parameters and interfaces.
+
+Accepting an edit to a placed definition updates the project and participates in
+project undo/redo. Existing custom-library definitions are also saved; library
+writes are independent of project history. Project-only definitions stay embedded.
+Editing a built-in library entry without a placed instance creates a custom copy.
+Cancel leaves the original definition untouched.
+
+See [cavity geometry conventions](docs/cavity-profile.md) for the exact parameter
+meaning, datum and validation limits.
+
+## Parallel check-valve physical demo
+
+Open [the separate project](examples/parallel_check_valves.amcad.json): IN → J1
+branches into CV1 → OUT1 and CV2 → OUT2. Both valves reference the **same**
+Illustrative Check Valve definition, with IN/OUT physical mappings, a fillet and
+a chamfer. Its dimensions demonstrate the workflow and are **not a commercial
+valve cavity standard**. The [definition](examples/illustrative_check_valve.component.json)
+and [graph export](examples/parallel_check_valves.graph.json) are included.
+
+```bash
+python -m app.main examples/parallel_check_valves.amcad.json
+QT_QPA_PLATFORM=offscreen python -m app.main examples/parallel_check_valves.amcad.json --smoke
+# Regenerate only this demonstrator:
+python -m examples.create_physical_demo
+```
 
 ## C1–R sample
 
@@ -146,7 +197,9 @@ UUIDs. Manual visual geometry is separate, under `schematic_geometry`, and is
 excluded from logical graph export. Junction ports share internal `JUNCTION`
 relationships, preserving the common hydraulic net without extra physical lines.
 
-Project/graph schema version **3** adds manual geometry and required-port metadata.
+Project/graph schema version **4** adds definition-level physical data; version 3
+introduced manual geometry and required-port metadata. Version 3 loads without
+changing its manual geometry; missing physical data defaults to NONE.
 Version 1/2 projects migrate deterministically on load. With the authorized
 legacy migration, multiple historical lines on a component/external port are
 converted into explicit bounded junctions, preserving the net. This happens only

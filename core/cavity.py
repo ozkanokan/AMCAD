@@ -1,0 +1,276 @@
+"""Parametric axial Z/radial R cavity geometry in mm; independent of Qt/CAD."""
+from copy import deepcopy
+from dataclasses import dataclass, field, asdict
+import math
+from core.port import new_id
+
+EPS = 1e-9
+
+
+def finite(value, label):
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        raise ValueError(f'{label} must be finite')
+    return value
+
+
+@dataclass
+class Corner:
+    type: str = 'SHARP'
+    radius_mm: float | None = None
+    length_mm: float | None = None
+    angle_deg: float | None = None
+
+
+@dataclass
+class ProfileVertex:
+    z: float
+    r: float
+    id: str = field(default_factory=new_id)
+    corner: Corner = field(default_factory=Corner)
+
+
+@dataclass
+class HydraulicInterface:
+    hydraulic_port_id: str
+    interface_type: str = 'AXIAL'
+    z_mm: float = 0
+    r_mm: float | None = 0
+    nominal_connection_diameter_mm: float = 4
+    preferred_direction: str = 'UNSPECIFIED'
+    id: str = field(default_factory=new_id)
+
+    def validate(self, port_ids):
+        if self.hydraulic_port_id not in port_ids:
+            raise ValueError('Interface references an unknown schematic port ID')
+        if self.interface_type not in ('AXIAL','RADIAL'):
+            raise ValueError('Interface type must be AXIAL or RADIAL')
+        if self.preferred_direction not in ('AXIAL_POSITIVE','AXIAL_NEGATIVE','RADIAL','UNSPECIFIED'):
+            raise ValueError('Invalid preferred routing direction')
+        finite(self.z_mm,'Interface Z')
+        if self.r_mm is not None and finite(self.r_mm,'Interface R') < 0:
+            raise ValueError('Interface R cannot be negative')
+        if finite(self.nominal_connection_diameter_mm,'Connection diameter') <= 0:
+            raise ValueError('Connection diameter must be positive')
+        if not isinstance(self.id,str) or not self.id:
+            raise ValueError('Interface needs a persistent ID')
+        return self
+
+
+def point(v):
+    return (v.z,v.r)
+
+
+def distance(a,b):
+    return math.hypot(a[0]-b[0],a[1]-b[1])
+
+
+def intersection(a,b,c,d):
+    def cross(p,q,r): return (q[0]-p[0])*(r[1]-p[1])-(q[1]-p[1])*(r[0]-p[0])
+    def on(p,q,r):
+        return abs(cross(p,q,r))<EPS and min(p[0],q[0])-EPS<=r[0]<=max(p[0],q[0])+EPS and min(p[1],q[1])-EPS<=r[1]<=max(p[1],q[1])+EPS
+    ab1,ab2,cd1,cd2=cross(a,b,c),cross(a,b,d),cross(c,d,a),cross(c,d,b)
+    return (ab1*ab2 < -EPS and cd1*cd2 < -EPS) or any((on(a,b,c),on(a,b,d),on(c,d,a),on(c,d,b)))
+
+
+@dataclass
+class CavityProfile:
+    vertices: list[ProfileVertex] = field(default_factory=list)
+    id: str = field(default_factory=new_id)
+    schema_version: int = 1
+    units: str = 'mm'
+    datum: dict = field(default_factory=lambda:{'mounting_face_z_mm':0,'positive_z':'DEPTH_INTO_MANIFOLD','revolve_axis_r_mm':0})
+
+    @classmethod
+    def from_dict(cls,data):
+        data=deepcopy(data)
+        data['vertices']=[ProfileVertex(**{**v,'corner':Corner(**v.get('corner',{}))}) for v in data['vertices']]
+        return cls(**data)
+
+    def to_dict(self): return asdict(self)
+
+    def vertex(self,vertex_id):
+        return next(v for v in self.vertices if v.id==vertex_id)
+
+    def add_point(self,z,r,after_id=None):
+        finite(z,'Z'); finite(r,'R')
+        if r<0: raise ValueError('R cannot be negative')
+        vertex=ProfileVertex(z,r)
+        index=len(self.vertices) if after_id is None else next(i for i,v in enumerate(self.vertices) if v.id==after_id)+1
+        self.vertices.insert(index,vertex)
+        return vertex
+
+    def edit_point(self,vertex_id,z,r):
+        finite(z,'Z'); finite(r,'R')
+        if r<0: raise ValueError('R cannot be negative')
+        v=self.vertex(vertex_id); before=(v.z,v.r)
+        v.z,v.r=z,r
+        try:
+            # A point edit must not invalidate an already installed corner feature.
+            if any(p.corner.type!='SHARP' for p in self.vertices): self.features()
+        except ValueError:
+            v.z,v.r=before
+            raise
+
+    def delete_point(self,vertex_id):
+        index=next(i for i,v in enumerate(self.vertices) if v.id==vertex_id)
+        candidate=deepcopy(self); del candidate.vertices[index]
+        for i,v in enumerate(candidate.vertices):
+            if i in (0,len(candidate.vertices)-1) and v.corner.type!='SHARP':
+                raise ValueError('Return the adjacent corner to SHARP before deleting its supporting point')
+        if any(v.corner.type!='SHARP' for v in candidate.vertices): candidate.features()
+        del self.vertices[index]
+
+    def set_corner(self,vertex_id,corner):
+        candidate=deepcopy(self); candidate.vertex(vertex_id).corner=deepcopy(corner)
+        if corner.type!='SHARP': candidate.validate()
+        self.vertex(vertex_id).corner=deepcopy(corner)
+
+    def features(self):
+        """Exact tangent points/arc centers; vertices remain authoritative."""
+        features=[]
+        for i,v in enumerate(self.vertices):
+            p=point(v); corner=v.corner
+            if corner.type=='SHARP':
+                if any(x is not None for x in (corner.radius_mm,corner.length_mm,corner.angle_deg)):
+                    raise ValueError('SHARP must not contain fillet/chamfer parameters')
+                features.append({'kind':'sharp','entry':p,'exit':p,'setback_in':0,'setback_out':0}); continue
+            if corner.type not in ('FILLET','CHAMFER'): raise ValueError('Unknown corner type')
+            if i==0 or i==len(self.vertices)-1: raise ValueError('Corner treatment needs two adjacent segments')
+            a,b=point(self.vertices[i-1]),point(self.vertices[i+1])
+            la,lb=distance(a,p),distance(b,p)
+            if min(la,lb)<=EPS: raise ValueError('Corner has a zero-length adjacent segment')
+            u=((a[0]-p[0])/la,(a[1]-p[1])/la); w=((b[0]-p[0])/lb,(b[1]-p[1])/lb)
+            theta=math.acos(max(-1,min(1,u[0]*w[0]+u[1]*w[1])))
+            if theta<EPS or math.pi-theta<EPS: raise ValueError('Corner needs a genuine non-collinear bend')
+            if corner.type=='FILLET':
+                radius=finite(corner.radius_mm,'Fillet radius')
+                if radius<=0: raise ValueError('Fillet radius must be positive')
+                if corner.length_mm is not None or corner.angle_deg is not None: raise ValueError('Fillet contains chamfer parameters')
+                da=db=radius/math.tan(theta/2)
+            else:
+                if corner.radius_mm is not None: raise ValueError('Chamfer contains a fillet radius')
+                da=finite(corner.length_mm,'Chamfer length'); angle=finite(corner.angle_deg,'Chamfer angle')
+                if da<=0: raise ValueError('Chamfer length must be positive')
+                if not 0<angle<180-math.degrees(theta): raise ValueError('Chamfer angle is incompatible with the included corner angle')
+                alpha=math.radians(angle); db=da*math.sin(alpha)/math.sin(theta+alpha)
+            if da>=la-EPS or db>=lb-EPS: raise ValueError('Corner treatment is too large for its adjacent segments')
+            entry=(p[0]+u[0]*da,p[1]+u[1]*da); exit=(p[0]+w[0]*db,p[1]+w[1]*db)
+            feature={'kind':'arc' if corner.type=='FILLET' else 'chamfer','entry':entry,'exit':exit,
+                     'setback_in':da,'setback_out':db}
+            if corner.type=='FILLET':
+                bisector=(u[0]+w[0],u[1]+w[1]); norm=math.hypot(*bisector)
+                length=radius/math.sin(theta/2)
+                center=(p[0]+bisector[0]/norm*length,p[1]+bisector[1]/norm*length)
+                start=math.degrees(math.atan2(entry[1]-center[1],entry[0]-center[0]))
+                turn=-(u[0]*w[1]-u[1]*w[0]); sweep=math.copysign(180-math.degrees(theta),turn)
+                feature.update(center=center,radius=radius,start_deg=start,sweep_deg=sweep)
+                minimum=min(entry[1],exit[1])
+                delta=(270-start)%360 if sweep>0 else (start-270)%360
+                if delta<=abs(sweep)+EPS: minimum=min(minimum,center[1]-radius)
+                if minimum < -EPS: raise ValueError('Fillet would cross the R=0 revolve axis')
+            features.append(feature)
+        for i in range(len(self.vertices)-1):
+            if features[i]['setback_out']+features[i+1]['setback_in']>=distance(point(self.vertices[i]),point(self.vertices[i+1]))-EPS:
+                raise ValueError('Adjacent corner treatments overlap or consume a segment')
+        return features
+
+    def pieces(self):
+        features=self.features(); pieces=[]
+        if not features: return pieces
+        current=features[0]['exit']
+        for feature in features[1:]:
+            pieces.append({'kind':'line','start':current,'end':feature['entry']})
+            if feature['kind']=='arc': pieces.append(feature)
+            elif feature['kind']=='chamfer': pieces.append({'kind':'line','start':feature['entry'],'end':feature['exit']})
+            current=feature['exit']
+        return pieces
+
+    def display_points(self):
+        """Transient tessellation for validation, never saved as profile vertices."""
+        result=[]
+        for piece in self.pieces():
+            if piece['kind']=='line': points=[piece['start'],piece['end']]
+            else:
+                points=[]
+                for i in range(33):
+                    angle=math.radians(piece['start_deg']+piece['sweep_deg']*i/32)
+                    points.append((piece['center'][0]+piece['radius']*math.cos(angle),piece['center'][1]+piece['radius']*math.sin(angle)))
+            for p in points:
+                if not result or distance(result[-1],p)>EPS: result.append(p)
+        return result
+
+    def validation_errors(self):
+        try:
+            if self.schema_version!=1 or self.units!='mm': raise ValueError('Unsupported cavity profile version or units')
+            if self.datum!={'mounting_face_z_mm':0,'positive_z':'DEPTH_INTO_MANIFOLD','revolve_axis_r_mm':0}:
+                raise ValueError('Cavity datum must be Z=0 mounting face, positive Z depth, R=0 axis')
+            if not isinstance(self.id,str) or not self.id: raise ValueError('Profile needs a persistent ID')
+            ids=[v.id for v in self.vertices]
+            if len(ids)!=len(set(ids)) or any(not isinstance(i,str) or not i for i in ids): raise ValueError('Vertex IDs must be unique and nonempty')
+            for v in self.vertices:
+                finite(v.z,'Z'); finite(v.r,'R')
+                if v.r<0: raise ValueError('R cannot be negative')
+            if len(self.vertices)<2: raise ValueError('At least two profile points are required')
+            raw=[point(v) for v in self.vertices]
+            if any(distance(a,b)<=EPS for a,b in zip(raw,raw[1:])): raise ValueError('Coincident points / zero-length segment')
+            for a,b,c in zip(raw,raw[1:],raw[2:]):
+                u=(a[0]-b[0],a[1]-b[1]); w=(c[0]-b[0],c[1]-b[1])
+                if abs(u[0]*w[1]-u[1]*w[0])<=EPS and u[0]*w[0]+u[1]*w[1]>0:
+                    raise ValueError('Profile retraces an adjacent segment')
+            # Axial profile is open. Non-adjacent touches count as self-intersection.
+            for i in range(len(raw)-1):
+                for j in range(i+2,len(raw)-1):
+                    if intersection(raw[i],raw[i+1],raw[j],raw[j+1]): raise ValueError('Profile has a self-intersection')
+            displayed=self.display_points()
+            for i in range(len(displayed)-1):
+                for j in range(i+2,len(displayed)-1):
+                    if intersection(displayed[i],displayed[i+1],displayed[j],displayed[j+1]):
+                        raise ValueError('Treated profile has a self-intersection')
+            return []
+        except (ValueError,TypeError) as error: return [str(error)]
+
+    def validate(self):
+        errors=self.validation_errors()
+        if errors: raise ValueError(errors[0])
+        return self
+
+
+def snapped(z,r,increment):
+    finite(z,'Z'); finite(r,'R')
+    if increment not in (0,.1,.5,1): raise ValueError('Unsupported grid snap')
+    if increment:
+        z=round(round(z/increment)*increment,10); r=round(round(r/increment)*increment,10)
+    return z,max(0,r)
+
+
+@dataclass
+class PhysicalDefinition:
+    cavity_type: str = 'NONE'
+    cavity_profile: CavityProfile | None = None
+    hydraulic_interfaces: list[HydraulicInterface] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls,data):
+        data=deepcopy(data)
+        if data.get('cavity_profile') is not None: data['cavity_profile']=CavityProfile.from_dict(data['cavity_profile'])
+        data['hydraulic_interfaces']=[HydraulicInterface(**i) for i in data.get('hydraulic_interfaces',[])]
+        return cls(**data)
+
+    def validate(self,ports):
+        if self.cavity_type=='NONE':
+            if self.cavity_profile is not None or self.hydraulic_interfaces: raise ValueError('NONE cavity must not contain profile/interfaces')
+            return self
+        if self.cavity_type!='REVOLVED_PROFILE' or self.cavity_profile is None: raise ValueError('Invalid cavity type/profile')
+        self.cavity_profile.validate()
+        mapped=set(); ids=set()
+        for interface in self.hydraulic_interfaces:
+            interface.validate({p.id for p in ports})
+            if interface.hydraulic_port_id in mapped: raise ValueError('Duplicate physical mapping for one schematic port')
+            if interface.id in ids: raise ValueError('Duplicate interface ID')
+            mapped.add(interface.hydraulic_port_id); ids.add(interface.id)
+        return self
+
+    def warnings(self,ports):
+        if self.cavity_type=='NONE': return []
+        mapped={i.hydraulic_port_id for i in self.hydraulic_interfaces}
+        return [f'Required port {p.id} has no physical interface' for p in ports if p.required and p.id not in mapped]

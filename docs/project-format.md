@@ -1,7 +1,8 @@
-# V1.2 project and graph contracts
+# V1.3 project and graph contracts
 
 Formats are UTF-8 JSON with `schema` and integer `schema_version`. Current
-version is **3**. Version 1/2 projects migrate explicitly on load. Graph exports
+version is **4**. Version 1/2 projects migrate topology explicitly on load.
+Version 3 keeps its geometry and gains NONE physical definitions when absent. Graph exports
 are output-only. Unsupported versions are rejected. Save validates and atomically
 replaces its target using a temporary sibling file; load completes before
 replacing the active project.
@@ -44,7 +45,10 @@ node sets, inconsistent geometry and unsupported versions are rejected. Geometry
 edits never modify logical endpoint references.
 
 Definitions have `id`, `name`, `prefix`, `category`, `symbol`, `ports`,
-`internal_relationships` and nullable future CAD paths. Symbol kinds are `box`,
+`internal_relationships`, `physical` and nullable future CAD paths. The physical
+block stores NONE or REVOLVED_PROFILE, parametric profile vertices/corners/datum,
+and hydraulic interfaces referencing existing port IDs. See
+[cavity-profile.md](cavity-profile.md). Instances never contain profile copies. Symbol kinds are `box`,
 `external`, `junction`. External interfaces have one port on their symbol's flat
 side. Junctions have three/four ports on distinct sides and a central filled dot
 with stubs. Junction port occupancy is bounded and all ports share internal
@@ -67,6 +71,7 @@ selection, preview, clipboard and undo history are session-only state.
 | Field | Content |
 | --- | --- |
 | `project` | Project metadata |
+| `component_definitions` | Unique reusable definitions, including physical metadata |
 | `component_instances` | UUID/name and definition identity |
 | `nodes` | UUID, instance/port identity, kind, label, type, direction, required flag |
 | `junctions` | Junction port-node UUIDs |
@@ -99,7 +104,7 @@ junction ports, invalid endpoints and duplicate records are rejected.
 
 Old lines receive initial orthogonal geometry and all old ports default to
 Required unless already marked Optional. Opening never rewrites files. Saving
-writes version 3. This migration is limited to old files: the editing UI never
+writes version 4. This migration is limited to old files: the editing UI never
 automatically inserts junctions or branches on line clicks.
 
 The original project is preserved in `tests/fixtures/c1_r.v1.json`; the current

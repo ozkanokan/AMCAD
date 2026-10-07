@@ -1,6 +1,213 @@
 {
   "schema": "amcad.hydraulic_graph",
-  "schema_version": 3,
+  "schema_version": 4,
+  "component_definitions": [
+    {
+      "id": "external-port",
+      "name": "External Port",
+      "prefix": "EXT",
+      "category": "Interfaces",
+      "ports": [
+        {
+          "id": "port",
+          "display_name": "Port",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "RIGHT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        }
+      ],
+      "symbol": {
+        "kind": "external",
+        "width": 40,
+        "height": 40
+      },
+      "internal_relationships": [],
+      "component_cad_path": null,
+      "cavity_cad_path": null,
+      "keepout_cad_path": null,
+      "physical": {
+        "cavity_type": "NONE",
+        "cavity_profile": null,
+        "hydraulic_interfaces": []
+      }
+    },
+    {
+      "id": "demo-ehsv",
+      "name": "EHSV",
+      "prefix": "EHSV",
+      "category": "Valves",
+      "ports": [
+        {
+          "id": "P",
+          "display_name": "P",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "TOP",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": false
+        },
+        {
+          "id": "R",
+          "display_name": "R",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "BOTTOM",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        },
+        {
+          "id": "C1",
+          "display_name": "C1",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "LEFT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        },
+        {
+          "id": "C2",
+          "display_name": "C2",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "RIGHT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": false
+        }
+      ],
+      "symbol": {
+        "kind": "box",
+        "width": 110,
+        "height": 76
+      },
+      "internal_relationships": [],
+      "component_cad_path": null,
+      "cavity_cad_path": null,
+      "keepout_cad_path": null,
+      "physical": {
+        "cavity_type": "NONE",
+        "cavity_profile": null,
+        "hydraulic_interfaces": []
+      }
+    },
+    {
+      "id": "demo-relief",
+      "name": "Relief Valve",
+      "prefix": "RV",
+      "category": "Valves",
+      "ports": [
+        {
+          "id": "IN",
+          "display_name": "IN",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "IN",
+          "side": "LEFT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        },
+        {
+          "id": "OUT",
+          "display_name": "OUT",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "OUT",
+          "side": "RIGHT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        }
+      ],
+      "symbol": {
+        "kind": "box",
+        "width": 110,
+        "height": 76
+      },
+      "internal_relationships": [
+        {
+          "from_port_id": "IN",
+          "to_port_id": "OUT",
+          "relationship": "RELIEF_VALVE"
+        }
+      ],
+      "component_cad_path": null,
+      "cavity_cad_path": null,
+      "keepout_cad_path": null,
+      "physical": {
+        "cavity_type": "NONE",
+        "cavity_profile": null,
+        "hydraulic_interfaces": []
+      }
+    },
+    {
+      "id": "junction-3",
+      "name": "3-Way Junction",
+      "prefix": "J",
+      "category": "Connectivity",
+      "ports": [
+        {
+          "id": "LEFT",
+          "display_name": "Left",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "BIDIRECTIONAL",
+          "side": "LEFT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        },
+        {
+          "id": "RIGHT",
+          "display_name": "Right",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "BIDIRECTIONAL",
+          "side": "RIGHT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        },
+        {
+          "id": "BOTTOM",
+          "display_name": "Bottom",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "BIDIRECTIONAL",
+          "side": "BOTTOM",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        }
+      ],
+      "symbol": {
+        "kind": "junction",
+        "width": 40,
+        "height": 40
+      },
+      "internal_relationships": [
+        {
+          "from_port_id": "LEFT",
+          "to_port_id": "RIGHT",
+          "relationship": "JUNCTION"
+        },
+        {
+          "from_port_id": "LEFT",
+          "to_port_id": "BOTTOM",
+          "relationship": "JUNCTION"
+        }
+      ],
+      "component_cad_path": null,
+      "cavity_cad_path": null,
+      "keepout_cad_path": null,
+      "physical": {
+        "cavity_type": "NONE",
+        "cavity_profile": null,
+        "hydraulic_interfaces": []
+      }
+    }
+  ],
   "project": {
     "id": "05bdc326-4c2d-429c-84d5-a7c6808e71f3",
     "name": "C1\u2013R hydraulic architecture"

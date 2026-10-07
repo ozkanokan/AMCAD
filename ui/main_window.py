@@ -58,6 +58,7 @@ class MainWindow(QMainWindow):
             (edit_menu,'delete_line','Delete Line',None,self.delete_lines),
             (edit_menu,'select_all','Select All',QKeySequence.SelectAll,self.select_all),
             (component_menu,'create','New Component…','Ctrl+Shift+N',self.new_component),
+            (component_menu,'cavity','Edit Definition Cavity…','Ctrl+Shift+C',self.selected_cavity),
             (component_menu,'rename','Properties / Rename…','F2',self.selected_properties),
             (component_menu,'rotate','Rotate 90°','Ctrl+R',self.rotate_selection),
             (component_menu,'junction','Add 3-Way Junction','Ctrl+J',self.add_junction),
@@ -178,6 +179,9 @@ class MainWindow(QMainWindow):
         form.addRow('Definition',QLabel(self.project.definitions[instance.definition_id].name))
         form.addRow('Persistent ID',QLabel(instance.id))
         form.addRow('Name',name); form.addRow('Rotation (degrees)',rotation)
+        cavity=QPushButton('Edit Definition Cavity…')
+        cavity.clicked.connect(lambda:self.edit_definition_cavity(instance.definition_id))
+        form.addRow(cavity)
         for node in self.project.nodes.values():
             if node.instance_id==instance_id:
                 form.addRow(node.port_id,QLabel(node.id))
@@ -191,6 +195,41 @@ class MainWindow(QMainWindow):
             self.view.rebuild([instance_id]); self.record_change()
         buttons.accepted.connect(apply)
         dialog.exec()
+
+    def selected_cavity(self):
+        ids=self.view.selected_instances()
+        if ids:
+            definitions={self.project.instances[i].definition_id for i in ids}
+            if len(definitions)!=1:
+                self.statusBar().showMessage('Select instances of one definition to edit their shared cavity'); return
+            definition_id=next(iter(definitions))
+        elif self.library_panel.currentItem():
+            definition_id=self.library_panel.currentItem().data(Qt.UserRole)
+        else:
+            self.statusBar().showMessage('Select a component or library definition'); return
+        self.edit_definition_cavity(definition_id)
+
+    def edit_definition_cavity(self, definition_id):
+        from copy import deepcopy
+        from ui.cavity_editor import CavityEditor
+        definition=self.available_definitions[definition_id]
+        dialog=CavityEditor(definition.ports,definition.physical,self)
+        if dialog.exec()!=QDialog.Accepted: return
+        updated=deepcopy(definition); updated.physical=dialog.result_physical
+        try:
+            updated.validate()
+            # Update custom library definitions; built-ins remain generic templates.
+            if self.library.is_custom(definition_id): self.library.update(updated)
+            if definition_id in self.project.definitions:
+                self.project.definitions[definition_id]=updated
+                self.record_change(); self.refresh_library()
+            elif not self.library.is_custom(definition_id):
+                from core.port import new_id
+                updated.id=new_id(); updated.name+=' (Cavity)'
+                self.library.save(updated); self.refresh_library()
+            else: self.refresh_library()
+            self.statusBar().showMessage('Cavity updated on the reusable definition; instances share one profile')
+        except (ValueError,OSError) as error: self.error(error)
 
     def new_component(self):
         from ui.node_wizard import NodeWizard

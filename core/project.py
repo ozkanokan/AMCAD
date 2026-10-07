@@ -11,7 +11,7 @@ from core.connection import Connection
 from core.port import Node, new_id
 from core.line_geometry import endpoint, routed_geometry, validate_geometry
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 def write_json(path, data):
@@ -160,7 +160,16 @@ class Project:
         mapping = {}
         added = []
         for d in data["definitions"]:
-            self.add_definition(ComponentDefinition.from_dict(d))
+            incoming=ComponentDefinition.from_dict(d)
+            existing=self.definitions.get(incoming.id)
+            if existing is not None and existing.physical != incoming.physical:
+                # A cavity edit applies to the reusable definition. An older
+                # schematic clipboard must not restore obsolete physical data.
+                old,new=existing.to_dict(),incoming.to_dict()
+                old.pop('physical'); new.pop('physical')
+                if old != new: raise ValueError('Copied schematic definition conflicts with the project')
+            else:
+                self.add_definition(incoming)
         for old in data["instances"]:
             instance = self.add_instance(self.definitions[old["definition_id"]], old["x"] + offset, old["y"] + offset)
             instance.rotation = old["rotation"]
@@ -240,12 +249,12 @@ class Project:
     def from_dict(cls, data):
         if not isinstance(data, dict):
             raise ValueError("Project JSON must be an object")
-        if data.get("schema") != "amcad.project" or data.get("schema_version") not in (1, 2, SCHEMA_VERSION):
+        if data.get("schema") != "amcad.project" or data.get("schema_version") not in (1, 2, 3, SCHEMA_VERSION):
             raise ValueError("Unsupported project schema/version")
         if data["schema_version"] == 1:
             from core.migration import migrate_v1
             data = migrate_v1(data)
-        legacy = data['schema_version'] < SCHEMA_VERSION
+        legacy = data['schema_version'] < 3
         if legacy:
             from core.migration import migrate_v2_branches
             data = migrate_v2_branches(data)

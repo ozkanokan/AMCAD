@@ -5,6 +5,7 @@ from PySide6.QtCore import Qt, QRectF
 from PySide6.QtGui import QPen, QColor, QFont, QPainter
 from core.component_definition import ComponentDefinition
 from core.port import PortDefinition, new_id
+from core.cavity import PhysicalDefinition
 from ui.geometry import port_positions
 
 
@@ -17,6 +18,7 @@ class NodeWizard(QDialog):
         self.definition = None
         self.definition_id = new_id()
         self.updating = False
+        self.physical = PhysicalDefinition()
         root = QVBoxLayout(self)
         form = QFormLayout()
         self.name=QLineEdit(); self.name.setPlaceholderText('EHSV or Relief Valve')
@@ -47,6 +49,10 @@ class NodeWizard(QDialog):
         add=QPushButton('+ Internal Relationship'); remove=QPushButton('Remove Relationship')
         add.clicked.connect(self.add_relationship); remove.clicked.connect(self.remove_relationship)
         row.addWidget(add); row.addWidget(remove); row.addStretch(); root.addLayout(row)
+        cavity_row=QHBoxLayout()
+        cavity=QPushButton('Cavity Profile…'); cavity.clicked.connect(self.edit_cavity)
+        self.cavity_summary=QLabel('Cavity: NONE')
+        cavity_row.addWidget(cavity); cavity_row.addWidget(self.cavity_summary); cavity_row.addStretch(); root.addLayout(cavity_row)
         self.error_label=QLabel(); self.error_label.setStyleSheet('color: #b3261e'); self.error_label.setWordWrap(True)
         root.addWidget(self.error_label)
         buttons=QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
@@ -94,7 +100,19 @@ class NodeWizard(QDialog):
         return ComponentDefinition(self.definition_id,self.name.text().strip(),self.prefix.text().strip(),
                                    self.category.text().strip(),ports,
                                    symbol={'kind':'box','width':min(1000,max(140,horizontal*45)),'height':max(90,vertical*30)},
-                                   internal_relationships=relationships)
+                                   internal_relationships=relationships, physical=self.physical)
+
+    def edit_cavity(self):
+        from ui.cavity_editor import CavityEditor
+        ports=self.build_definition().ports
+        ids=[p.id for p in ports]
+        if any(not i for i in ids) or len(ids)!=len(set(ids)):
+            self.error_label.setText('Set unique schematic port IDs before mapping a cavity'); return
+        dialog=CavityEditor(ports,self.physical,self)
+        if dialog.exec()==QDialog.Accepted:
+            self.physical=dialog.result_physical
+            count=len(self.physical.cavity_profile.vertices) if self.physical.cavity_profile else 0
+            self.cavity_summary.setText(f'Cavity: {self.physical.cavity_type} · {count} points')
 
     def update_preview(self,*args):
         if self.updating: return

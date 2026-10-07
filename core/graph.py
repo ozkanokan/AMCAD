@@ -20,7 +20,8 @@ def export_graph(project):
                              "from_node_id": project.node_for(i.id, r["from_port_id"]).id,
                              "to_node_id": project.node_for(i.id, r["to_port_id"]).id,
                              "relationship": r.get("relationship", "UNSPECIFIED")})
-    return {"schema": "amcad.hydraulic_graph", "schema_version": 3,
+    return {"schema": "amcad.hydraulic_graph", "schema_version": 4,
+            "component_definitions": [d.to_dict() for d in project.definitions.values()],
             "project": dict(project.metadata),
             "component_instances": [{"id": i.id, "name": i.name, "definition_id": i.definition_id,
                                       "definition_name": project.definitions[i.definition_id].name}

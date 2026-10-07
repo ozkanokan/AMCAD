@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field, asdict
 from core.port import PortDefinition
+from core.cavity import PhysicalDefinition
 
 
 @dataclass
@@ -14,6 +15,7 @@ class ComponentDefinition:
     component_cad_path: str | None = None
     cavity_cad_path: str | None = None
     keepout_cad_path: str | None = None
+    physical: PhysicalDefinition = field(default_factory=PhysicalDefinition)
 
     def validate(self):
         if not all(isinstance(v, str) and v.strip() for v in (self.id, self.name, self.prefix, self.category)):
@@ -54,6 +56,7 @@ class ComponentDefinition:
                         reachable.update((r["from_port_id"], r["to_port_id"]))
             if reachable != set(ids):
                 raise ValueError("All junction ports must be joined by internal JUNCTION relationships")
+        self.physical.validate(self.ports)
         return self
 
     def to_dict(self):
@@ -63,4 +66,5 @@ class ComponentDefinition:
     def from_dict(cls, data):
         data = dict(data)
         data["ports"] = [PortDefinition(**p) for p in data["ports"]]
+        data['physical'] = PhysicalDefinition.from_dict(data.get('physical', {}))
         return cls(**data).validate()

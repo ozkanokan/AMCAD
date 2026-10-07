@@ -48,15 +48,15 @@ def test_full_desktop_acceptance(qapp,tmp_path):
     window.library.save(ehsv); window.library.save(rv); window.refresh_library()
     assert ehsv.id in ComponentLibrary(tmp_path/'library').definitions
     for definition,x,y in [('external-port',-300,-60),('external-port',320,170),
-                            (ehsv.id,20,-100),(rv.id,20,170),('junction-3',-150,-60)]:
+                            (ehsv.id,20,-100),(rv.id,20,170),('junction-3',-150,-60),('junction-3',220,170)]:
         window.place(definition,x,y)
-    c1,ret,e,r,j=list(window.project.instances.values())
+    c1,ret,e,r,j,j2=list(window.project.instances.values())
     window.project.rename(c1.id,'C1'); window.project.rename(ret.id,'R')
     window.view.rebuild(); window.record_change(); window.view.fit_content(); qapp.processEvents()
-    for a,ap,b,bp in [(c1,'port',j,'LEFT'),(j,'RIGHT',e,'C1'),(j,'BOTTOM',r,'IN'),(r,'OUT',ret,'port'),(e,'R',ret,'port')]:
+    for a,ap,b,bp in [(c1,'port',j,'LEFT'),(j,'RIGHT',e,'C1'),(j,'BOTTOM',r,'IN'),(r,'OUT',j2,'LEFT'),(e,'R',j2,'BOTTOM'),(j2,'RIGHT',ret,'port')]:
         click_port(window,window.project.node_for(a.id,ap).id,qapp)
         click_port(window,window.project.node_for(b.id,bp).id,qapp)
-    assert len(window.project.connections)==5
+    assert len(window.project.connections)==6
     edges=[(c.from_node_id,c.to_node_id) for c in window.project.connections.values()]
     rv_item=window.view.component_items[r.id]
     original_endpoint=window.view.port_items[window.project.node_for(r.id,'IN').id].scenePos()
@@ -85,13 +85,13 @@ def test_full_desktop_acceptance(qapp,tmp_path):
     reopened=MainWindow(tmp_path/'library'); reopened.load_path(tmp_path/'project.json')
     reopened.show(); qapp.processEvents()
     assert reopened.project.to_dict()==expected
-    assert len(reopened.view.component_items)==5 and len(reopened.view.wires)==5
+    assert len(reopened.view.component_items)==6 and len(reopened.view.wires)==6
     reopened.export_to(tmp_path/'graph.json')
     graph=json.loads((tmp_path/'graph.json').read_text())
-    assert len(graph['nodes'])==11 and len(graph['junctions'])==3
-    assert len(graph['junction_instances'])==1
-    assert len(graph['routing_connections'])==5
-    assert len(graph['component_internal_relationships'])==3
+    assert len(graph['nodes'])==14 and len(graph['junctions'])==6
+    assert len(graph['junction_instances'])==2
+    assert len(graph['routing_connections'])==6
+    assert len(graph['component_internal_relationships'])==5
     assert {n['label'] for n in graph['nodes']} >= {'C1','R','EHSV1.C1','RV1.IN'}
     reopened.grab().save('/tmp/amcad-acceptance.png')
     reopened.close()

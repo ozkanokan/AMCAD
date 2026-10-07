@@ -27,8 +27,8 @@ class NodeWizard(QDialog):
         form.addRow('Category',self.category); form.addRow('Number of Hydraulic Ports',self.count)
         root.addLayout(form)
         root.addWidget(QLabel('Arrange ports by side; row order controls spacing along each side.'))
-        self.ports=QTableWidget(0,5)
-        self.ports.setHorizontalHeaderLabels(['Port ID','Display Name','Port Type','Flow Direction','Symbol Side'])
+        self.ports=QTableWidget(0,6)
+        self.ports.setHorizontalHeaderLabels(['Port ID','Display Name','Port Type','Flow Direction','Symbol Side','Requirement'])
         self.ports.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         root.addWidget(self.ports)
         self.scene=QGraphicsScene(self)
@@ -67,6 +67,9 @@ class NodeWizard(QDialog):
             side=QComboBox(); side.addItems(['LEFT','RIGHT','TOP','BOTTOM'])
             side.setCurrentIndex(row%2)
             self.ports.setCellWidget(row,3,flow); self.ports.setCellWidget(row,4,side)
+            required=QComboBox(); required.addItems(['Required','Optional'])
+            self.ports.setCellWidget(row,5,required)
+            required.currentTextChanged.connect(self.update_preview)
             flow.currentTextChanged.connect(self.update_preview)
             side.currentTextChanged.connect(self.update_preview)
         self.updating=False
@@ -79,7 +82,8 @@ class NodeWizard(QDialog):
     def build_definition(self):
         ports = [PortDefinition(self.text_at(self.ports,r,0),self.text_at(self.ports,r,1),
                                 self.text_at(self.ports,r,2),self.ports.cellWidget(r,3).currentText(),
-                                self.ports.cellWidget(r,4).currentText()) for r in range(self.ports.rowCount())]
+                                self.ports.cellWidget(r,4).currentText(),
+                                required=self.ports.cellWidget(r,5).currentText()=='Required') for r in range(self.ports.rowCount())]
         relationships=[{'from_port_id':self.text_at(self.relationships,r,0),
                         'to_port_id':self.text_at(self.relationships,r,1),
                         'relationship':self.text_at(self.relationships,r,2) or 'UNSPECIFIED'}

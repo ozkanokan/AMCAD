@@ -1,96 +1,107 @@
-# V1.1 project and graph contracts
+# V1.2 project and graph contracts
 
-Both formats are UTF-8, human-readable JSON with `schema` and integer
-`schema_version`. Current version is **2**. Version 1 projects migrate explicitly
-on load; graph exports are output-only. Unsupported versions are rejected.
-Project save is atomic: validation and serialization finish in a temporary
-sibling file before replacing the target. Loading completes before replacing the
-open project, so invalid files do not destroy the current session.
+Formats are UTF-8 JSON with `schema` and integer `schema_version`. Current
+version is **3**. Version 1/2 projects migrate explicitly on load. Graph exports
+are output-only. Unsupported versions are rejected. Save validates and atomically
+replaces its target using a temporary sibling file; load completes before
+replacing the active project.
 
 ## Project: `amcad.project`
 
 | Field | Content |
 | --- | --- |
-| `project` | Persistent project `id` and human-readable `name` |
-| `component_definitions` | Definitions used or embedded in the project |
-| `component_instances` | UUID `id`, `definition_id`, unique `name`, `x`, `y`, `rotation` |
-| `nodes` | UUID `id`, `instance_id`, definition-local `port_id`, `kind` |
-| `connections` | UUID `id`, node UUIDs and explicit instance/port references at both ends |
-| `junctions` | Junction port-node UUID index, consistent with `nodes` |
+| `project` | Persistent project ID and name |
+| `component_definitions` | Embedded definitions |
+| `component_instances` | UUID, definition ID, name, x/y, clockwise quarter-turn rotation |
+| `nodes` | UUID, instance UUID, definition-local port ID, kind |
+| `connections` | Logical references plus independent `schematic_geometry` |
+| `junctions` | Junction port-node UUID index consistent with nodes |
 
-Every connection persists `from_component_instance_id`, `from_port_id`,
-`to_component_instance_id`, `to_port_id`, `from_node_id`, `to_node_id` and `id`.
-The node UUIDs must resolve to the same instance/port pairs; disagreement is
-rejected. Renaming, movement and rotation never rewrite these identities.
-Malformed references, duplicate IDs/edges, mismatched node sets, overoccupied
-junction ports and unsupported versions are rejected during load/save validation.
+Connections persist `id`, `from_component_instance_id`, `from_port_id`,
+`to_component_instance_id`, `to_port_id`, `from_node_id`, `to_node_id` and:
 
-Each definition has `id`, `name`, `prefix`, `category`, `symbol`, `ports`,
-`internal_relationships` and nullable `component_cad_path`, `cavity_cad_path`,
-`keepout_cad_path`. A symbol has `kind` (`box`, `external` or `junction`), width
-and height. External ports have exactly one port. Junctions have exactly three
-or four ports, each on a distinct side and each accepting one routing connection.
+```json
+"schematic_geometry": {
+  "points": [[0, 0], [20, 0], [80, 0], [80, 100], [180, 100], [200, 100]],
+  "controls": [[80, 0], [80, 100]]
+}
+```
 
-Port definitions contain `id`, `display_name`, `port_type`, `flow_direction`,
-`side`, nullable `local_position_xyz` and `local_direction_xyz`. Flow direction
-is `IN`, `OUT`, `BIDIRECTIONAL` or `UNSPECIFIED`; symbol side is `LEFT`, `RIGHT`,
-`TOP` or `BOTTOM`. Port geometry and CAD paths are reserved metadata and have
-no V1.1 behavior.
+This illustrative example joins a RIGHT source at [0,0] to a LEFT target at
+[200,100]. `points` is the full ordered orthogonal route, including endpoint
+leads/adapters. `controls` is the fixed manually arranged interior spine. On
+movement/rotation only endpoint-adjacent adapters are rebuilt; controls remain
+fixed. A segment/bend edit promotes the edited interior points to controls. Copy
+and paste translates points and controls with the component offset. Save/load
+preserves exact geometry; crossing jumps and edit handles are not serialized.
 
-Internal relationships contain `from_port_id`, `to_port_id`, and a
-`relationship` label. Generic components have no assumed internal behavior.
-A relief valve may declare an `IN → OUT` `RELIEF_VALVE` relationship. Junction
-ports are joined into one common hydraulic net with internal `JUNCTION`
-relationships. These relationships are never physical routing connections.
+All coordinates must be finite; adjacent duplicate points and diagonal segments
+are rejected in saved geometry. Saved points must agree with controls and their
+current port endpoints. Node UUIDs must agree with the explicit instance/port
+pairs. Every port accepts exactly one external line, regardless of object kind.
+Multiply occupied ports, malformed references, duplicate IDs/edges, mismatched
+node sets, inconsistent geometry and unsupported versions are rejected. Geometry
+edits never modify logical endpoint references.
 
-Schematic coordinates are scene units; clockwise rotation is 0, 90, 180 or 270
-about the symbol center. Port sides rotate TOP → RIGHT → BOTTOM → LEFT → TOP.
-A full turn normalizes to 0. Definition-local port sides/IDs remain unchanged.
-The graphical position and global side are computed from the instance transform.
-Wires have 20-unit orthogonal outward leads at both ends; the destination lead
-is traversed in reverse when arriving. No pixel geometry appears in connections.
-Zoom, selection, clipboard and undo history are session state, not project content.
+Definitions have `id`, `name`, `prefix`, `category`, `symbol`, `ports`,
+`internal_relationships` and nullable future CAD paths. Symbol kinds are `box`,
+`external`, `junction`. External interfaces have one port on their symbol's flat
+side. Junctions have three/four ports on distinct sides and a central filled dot
+with stubs. Junction port occupancy is bounded and all ports share internal
+`JUNCTION` relationships. These are hydraulic connectivity metadata, never
+physical manifold channels.
 
-Node `kind` is `component_port`, `external_port`, or `junction`. Junction instances
-provide the position of a small central dot and its three/four connectable ports.
-Their internally connected port nodes remain distinct, permitting occupancy
-validation and directional leads. Crossings create no graph object; wire-click
-branching is not implemented.
+Port definitions include `id`, `display_name`, `port_type`, `flow_direction`,
+`side`, **`required` (boolean, default true)**, and nullable future local XYZ
+position/direction fields. Side is LEFT/RIGHT/TOP/BOTTOM; flow direction is
+IN/OUT/BIDIRECTIONAL/UNSPECIFIED. Required unconnected ports determine component
+incompleteness; optional ports do not. Completeness is derived, not persisted.
+
+Rotation is clockwise 0/90/180/270 about the symbol center. TOP → RIGHT → BOTTOM
+→ LEFT. Definition-local port IDs and sides stay unchanged. External symbols
+rotate with their flat-side port. Line lead length is 20 scene units. Zoom,
+selection, preview, clipboard and undo history are session-only state.
 
 ## Graph: `amcad.hydraulic_graph`
 
 | Field | Content |
 | --- | --- |
 | `project` | Project metadata |
-| `component_instances` | UUID, name, definition ID and definition name |
-| `nodes` | Node UUID, instance UUID, port ID, kind, label, type, flow direction |
+| `component_instances` | UUID/name and definition identity |
+| `nodes` | UUID, instance/port identity, kind, label, type, direction, required flag |
 | `junctions` | Junction port-node UUIDs |
-| `junction_instances` | Junction instance UUID/name, `port_node_ids`, `capacity` (3 or 4) |
-| `routing_connections` | Explicit instance/port pairs and node UUID edges; `requires_routing: true` |
+| `junction_instances` | UUID/name, port-node IDs, capacity (3/4) |
+| `routing_connections` | Explicit instance/port references and node UUIDs; no visual geometry |
 | `component_internal_relationships` | Instance UUID, node UUID endpoints, relationship type |
 
-Port labels are `INSTANCE.PORT_ID`, with bare names only for external interfaces.
-Labels are descriptive; persistent references are authoritative. Routing edges
-have `direction_semantics: "connectivity_only"`: `from` and `to` retain creation
-order and do not impose flow. `requires_routing` classifies future routing input;
-it does not claim V1.1 computes physical routes. Internal relationships have no
-routing flag and are never inserted into the routing connection list. Consumers
-must apply junction internal relationships to recover their common hydraulic net.
+Port labels are INSTANCE.PORT_ID; external interface labels are bare instance
+names. IDs are authoritative. Routing edges have `requires_routing: true` and
+`direction_semantics: "connectivity_only"`; their endpoint order is not simulated
+flow. Internal relationships have no routing flag. Consumers apply internal
+JUNCTION relationships to recover common hydraulic nets. Neither geometry edits
+nor crossings/jumps create or change graph objects or relationships.
 
-## Version 1 compatibility
+## Legacy migration
 
-Opening a V1 project fills explicit instance/port endpoint references from its
-existing node UUIDs. A legacy single-port junction is converted to 3-Way when
-its degree is at most three, or 4-Way when its degree is four. Its instance UUID,
-name, schematic position/orientation, connection UUIDs and non-junction endpoints
-are preserved. Each incident connection gets its own junction port, preferring
-the side facing its neighbor. Junctions receive internal common-net relationships.
-The first assigned port keeps the old junction node UUID; remaining port and
-definition UUIDs are derived deterministically. Repeated loads produce identical
-migrated data. Saving writes version 2; opening never rewrites the original file.
+V1 single-port junctions convert to 3-Way at degree ≤3 or 4-Way at degree 4,
+retaining instance IDs and assigning separate ports to their incident lines.
+Degrees above four still require splitting the legacy junction before upgrading.
+Definition and additional port IDs are deterministic, and ordinary component
+endpoints retain their port identities.
 
-Legacy junctions with more than four branches cannot fit either bounded type and
-are rejected with a clear instruction to split them before upgrading. Invalid
-legacy references, duplicate edges and inconsistent junction indexes are rejected
-rather than repaired silently. The original `examples/c1_r.amcad.json` remains a
-V1 compatibility sample; its corresponding graph example is exported as version 2.
+The authorized V1.2 legacy-file migration also handles formerly valid fan-outs
+on component/external ports: it adds an explicit 3-Way/4-Way Junction, or bounded
+3-Way chain for higher degrees, and retargets the incident lines through its
+separate ports. The original port has one new line into that common net.
+Existing instances, node IDs, original line IDs and hydraulic terminal nets are
+preserved. Added IDs and unique names are deterministic. Overoccupied V1.1
+junction ports, invalid endpoints and duplicate records are rejected.
+
+Old lines receive initial orthogonal geometry and all old ports default to
+Required unless already marked Optional. Opening never rewrites files. Saving
+writes version 3. This migration is limited to old files: the editing UI never
+automatically inserts junctions or branches on line clicks.
+
+The original project is preserved in `tests/fixtures/c1_r.v1.json`; the current
+sample in `examples/` uses explicit supply/return junctions, manual controls and
+crossing jumps without changing its historical hydraulic terminal nets.

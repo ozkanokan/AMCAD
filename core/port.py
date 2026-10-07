@@ -15,6 +15,7 @@ class PortDefinition:
     side: str = "LEFT"
     local_position_xyz: list | None = None
     local_direction_xyz: list | None = None
+    required: bool = True
 
 
 @dataclass

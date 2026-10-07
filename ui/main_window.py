@@ -36,7 +36,7 @@ class MainWindow(QMainWindow):
         self.library_panel = ComponentLibraryPanel(); layout.addWidget(self.library_panel)
         self.library_panel.itemDoubleClicked.connect(self.place_center)
         new = QPushButton('+ New Component'); new.clicked.connect(self.new_component); layout.addWidget(new)
-        dock.setWidget(panel); self.addDockWidget(Qt.LeftDockWidgetArea,dock)
+        dock.setWidget(panel); self.addDockWidget(Qt.RightDockWidgetArea,dock)
         dock.setMinimumWidth(220)
         self.actions = {}
         file_menu = self.menuBar().addMenu('&File')
@@ -55,6 +55,7 @@ class MainWindow(QMainWindow):
             (edit_menu,'copy','Copy',QKeySequence.Copy,self.copy),
             (edit_menu,'paste','Paste',QKeySequence.Paste,self.paste),
             (edit_menu,'delete','Delete Selection',QKeySequence.Delete,self.delete_selection),
+            (edit_menu,'delete_line','Delete Line',None,self.delete_lines),
             (edit_menu,'select_all','Select All',QKeySequence.SelectAll,self.select_all),
             (component_menu,'create','New Component…','Ctrl+Shift+N',self.new_component),
             (component_menu,'rename','Properties / Rename…','F2',self.selected_properties),
@@ -65,12 +66,13 @@ class MainWindow(QMainWindow):
             (view_menu,'zoom_in','Zoom In','Ctrl++',lambda:self.view.zoom(1.15)),
             (view_menu,'zoom_out','Zoom Out','Ctrl+-',lambda:self.view.zoom(1/1.15)),
         ]:
-            action = QAction(label,self); action.setShortcut(shortcut)
+            action = QAction(label,self)
+            if shortcut is not None: action.setShortcut(shortcut)
             action.triggered.connect(callback); menu.addAction(action); self.actions[key]=action
             if key in {'save','undo','redo','delete','rotate','junction','fit'}: toolbar.addAction(action)
         self.refresh_library()
         self.update_title()
-        self.statusBar().showMessage('Drag components • click two ports to connect • middle-drag to pan • wheel to zoom')
+        self.statusBar().showMessage('Drag components • click a free port to draw a line • middle-drag to pan • wheel to zoom')
         if self.library.errors:
             self.statusBar().showMessage('Some library files could not be loaded: '+'; '.join(self.library.errors))
 
@@ -83,6 +85,8 @@ class MainWindow(QMainWindow):
         names = [self.project.instances[i].name for i in self.view.selected_instances()]
         if names:
             self.statusBar().showMessage('Selected: '+', '.join(names)+' · F2 properties · Ctrl+R rotate')
+        elif self.view.selected_connections():
+            self.statusBar().showMessage('Line selected · drag segment handles or bend points · Delete removes the line')
 
     def update_title(self):
         dirty = self.history.is_dirty(self.project)
@@ -114,13 +118,18 @@ class MainWindow(QMainWindow):
         if isinstance(ways, bool): ways = 3
         pos = self.view.mapToScene(self.view.viewport().rect().center())
         self.place(f'junction-{ways}',pos.x(),pos.y())
-        self.statusBar().showMessage('Connect each branch to a free junction port. Crossing wires are not connected.')
+        self.statusBar().showMessage('Connect each branch to a free junction port. Crossing lines are not connected.')
 
     def delete_selection(self):
         instance_ids = self.view.selected_instances()
         connection_ids = self.view.selected_connections()
         for connection_id in connection_ids: self.project.connections.pop(connection_id,None)
         for instance_id in instance_ids: self.project.remove_instance(instance_id)
+        self.view.rebuild(); self.record_change()
+
+    def delete_lines(self):
+        for connection_id in self.view.selected_connections():
+            self.project.connections.pop(connection_id, None)
         self.view.rebuild(); self.record_change()
 
     def rotate_selection(self):
@@ -138,7 +147,7 @@ class MainWindow(QMainWindow):
         if ids:
             self.clipboard_data = self.project.copy_subgraph(ids)
             self.paste_count=0
-            self.statusBar().showMessage(f'Copied {len(ids)} component(s) and wires between them')
+            self.statusBar().showMessage(f'Copied {len(ids)} component(s) and lines between them')
 
     def paste(self):
         if self.clipboard_data:

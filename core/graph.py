@@ -12,7 +12,7 @@ def export_graph(project):
         port = next(p for p in d.ports if p.id == n.port_id)
         label = i.name if n.kind == "external_port" else f"{i.name}.{n.port_id}"
         nodes.append({**asdict(n), "label": label, "port_type": port.port_type,
-                      "flow_direction": port.flow_direction})
+                      "flow_direction": port.flow_direction, "required": port.required})
     internal = []
     for i in project.instances.values():
         for r in project.definitions[i.definition_id].internal_relationships:
@@ -20,7 +20,7 @@ def export_graph(project):
                              "from_node_id": project.node_for(i.id, r["from_port_id"]).id,
                              "to_node_id": project.node_for(i.id, r["to_port_id"]).id,
                              "relationship": r.get("relationship", "UNSPECIFIED")})
-    return {"schema": "amcad.hydraulic_graph", "schema_version": 2,
+    return {"schema": "amcad.hydraulic_graph", "schema_version": 3,
             "project": dict(project.metadata),
             "component_instances": [{"id": i.id, "name": i.name, "definition_id": i.definition_id,
                                       "definition_name": project.definitions[i.definition_id].name}
@@ -31,7 +31,7 @@ def export_graph(project):
                                     "capacity": len(project.definitions[i.definition_id].ports)}
                                    for i in project.instances.values()
                                    if project.definitions[i.definition_id].symbol.get("kind") == "junction"],
-            "routing_connections": [{**asdict(c), "requires_routing": True,
+            "routing_connections": [{**{k:v for k,v in asdict(c).items() if k != 'schematic_geometry'}, "requires_routing": True,
                                      "direction_semantics": "connectivity_only"}
                                     for c in project.connections.values()],
             "component_internal_relationships": internal}

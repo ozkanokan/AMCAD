@@ -1,0 +1,284 @@
+{
+  "schema": "amcad.project",
+  "schema_version": 1,
+  "project": {
+    "id": "8ed58e59-53ae-49fe-a65f-57fb1521029d",
+    "name": "C1\u2013R hydraulic architecture"
+  },
+  "component_definitions": [
+    {
+      "id": "external-port",
+      "name": "External Port",
+      "prefix": "EXT",
+      "category": "Interfaces",
+      "ports": [
+        {
+          "id": "port",
+          "display_name": "Port",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "RIGHT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null
+        }
+      ],
+      "symbol": {
+        "kind": "external",
+        "width": 40,
+        "height": 40
+      },
+      "internal_relationships": [],
+      "component_cad_path": null,
+      "cavity_cad_path": null,
+      "keepout_cad_path": null
+    },
+    {
+      "id": "demo-ehsv",
+      "name": "EHSV",
+      "prefix": "EHSV",
+      "category": "Valves",
+      "ports": [
+        {
+          "id": "P",
+          "display_name": "P",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "TOP",
+          "local_position_xyz": null,
+          "local_direction_xyz": null
+        },
+        {
+          "id": "R",
+          "display_name": "R",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "BOTTOM",
+          "local_position_xyz": null,
+          "local_direction_xyz": null
+        },
+        {
+          "id": "C1",
+          "display_name": "C1",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "LEFT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null
+        },
+        {
+          "id": "C2",
+          "display_name": "C2",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "RIGHT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null
+        }
+      ],
+      "symbol": {
+        "kind": "box",
+        "width": 110,
+        "height": 76
+      },
+      "internal_relationships": [],
+      "component_cad_path": null,
+      "cavity_cad_path": null,
+      "keepout_cad_path": null
+    },
+    {
+      "id": "demo-relief",
+      "name": "Relief Valve",
+      "prefix": "RV",
+      "category": "Valves",
+      "ports": [
+        {
+          "id": "IN",
+          "display_name": "IN",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "IN",
+          "side": "LEFT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null
+        },
+        {
+          "id": "OUT",
+          "display_name": "OUT",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "OUT",
+          "side": "RIGHT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null
+        }
+      ],
+      "symbol": {
+        "kind": "box",
+        "width": 110,
+        "height": 76
+      },
+      "internal_relationships": [
+        {
+          "from_port_id": "IN",
+          "to_port_id": "OUT",
+          "relationship": "RELIEF_VALVE"
+        }
+      ],
+      "component_cad_path": null,
+      "cavity_cad_path": null,
+      "keepout_cad_path": null
+    },
+    {
+      "id": "junction",
+      "name": "Junction",
+      "prefix": "J",
+      "category": "Connectivity",
+      "ports": [
+        {
+          "id": "j",
+          "display_name": "J",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "RIGHT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null
+        }
+      ],
+      "symbol": {
+        "kind": "junction",
+        "width": 20,
+        "height": 20
+      },
+      "internal_relationships": [],
+      "component_cad_path": null,
+      "cavity_cad_path": null,
+      "keepout_cad_path": null
+    }
+  ],
+  "component_instances": [
+    {
+      "definition_id": "external-port",
+      "name": "C1",
+      "x": -300,
+      "y": -60,
+      "rotation": 0,
+      "id": "6c26f28b-f556-4176-8bd2-9b774ed85aeb"
+    },
+    {
+      "definition_id": "external-port",
+      "name": "R",
+      "x": 320,
+      "y": 170,
+      "rotation": 0,
+      "id": "3a7f1a5f-dcb2-4e09-bd27-8d2bdbd68e06"
+    },
+    {
+      "definition_id": "demo-ehsv",
+      "name": "EHSV1",
+      "x": 20,
+      "y": -100,
+      "rotation": 0,
+      "id": "1e945c91-b65b-4ffc-a973-ec6cc42ed457"
+    },
+    {
+      "definition_id": "demo-relief",
+      "name": "RV1",
+      "x": 20,
+      "y": 170,
+      "rotation": 0,
+      "id": "40f582bf-5601-48d7-b24d-b71d7233fc5c"
+    },
+    {
+      "definition_id": "junction",
+      "name": "J1",
+      "x": -150,
+      "y": -60,
+      "rotation": 0,
+      "id": "0ed61957-1629-430a-8868-8f2cf4110373"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "5502493c-38c0-4ffe-a0e7-712ef5791ba0",
+      "instance_id": "6c26f28b-f556-4176-8bd2-9b774ed85aeb",
+      "port_id": "port",
+      "kind": "external_port"
+    },
+    {
+      "id": "83f3ec56-85eb-406d-888d-51bd453d1c84",
+      "instance_id": "3a7f1a5f-dcb2-4e09-bd27-8d2bdbd68e06",
+      "port_id": "port",
+      "kind": "external_port"
+    },
+    {
+      "id": "001f6f89-9f2c-418c-a5af-9127dbccd038",
+      "instance_id": "1e945c91-b65b-4ffc-a973-ec6cc42ed457",
+      "port_id": "P",
+      "kind": "component_port"
+    },
+    {
+      "id": "32678f66-eb62-4478-a077-47277c155fb1",
+      "instance_id": "1e945c91-b65b-4ffc-a973-ec6cc42ed457",
+      "port_id": "R",
+      "kind": "component_port"
+    },
+    {
+      "id": "f3d1bd96-f387-4205-9015-ca4012cb8a5c",
+      "instance_id": "1e945c91-b65b-4ffc-a973-ec6cc42ed457",
+      "port_id": "C1",
+      "kind": "component_port"
+    },
+    {
+      "id": "34169042-510d-401f-b48a-ce62f8fb3d4c",
+      "instance_id": "1e945c91-b65b-4ffc-a973-ec6cc42ed457",
+      "port_id": "C2",
+      "kind": "component_port"
+    },
+    {
+      "id": "1be2f389-7265-441d-b72d-9b202ca5446f",
+      "instance_id": "40f582bf-5601-48d7-b24d-b71d7233fc5c",
+      "port_id": "IN",
+      "kind": "component_port"
+    },
+    {
+      "id": "c22c2eb5-52e6-4819-9544-c526802b5de9",
+      "instance_id": "40f582bf-5601-48d7-b24d-b71d7233fc5c",
+      "port_id": "OUT",
+      "kind": "component_port"
+    },
+    {
+      "id": "b97adc84-935f-4364-b473-3e4b29a1adc2",
+      "instance_id": "0ed61957-1629-430a-8868-8f2cf4110373",
+      "port_id": "j",
+      "kind": "junction"
+    }
+  ],
+  "connections": [
+    {
+      "from_node_id": "5502493c-38c0-4ffe-a0e7-712ef5791ba0",
+      "to_node_id": "b97adc84-935f-4364-b473-3e4b29a1adc2",
+      "id": "1391ade7-e21c-48bf-bb78-6318e661a44e"
+    },
+    {
+      "from_node_id": "b97adc84-935f-4364-b473-3e4b29a1adc2",
+      "to_node_id": "f3d1bd96-f387-4205-9015-ca4012cb8a5c",
+      "id": "145d5890-924e-462c-a1ce-2e5d97a5f39f"
+    },
+    {
+      "from_node_id": "b97adc84-935f-4364-b473-3e4b29a1adc2",
+      "to_node_id": "1be2f389-7265-441d-b72d-9b202ca5446f",
+      "id": "a4c7a966-9973-4382-9866-b33bb2f5ee95"
+    },
+    {
+      "from_node_id": "c22c2eb5-52e6-4819-9544-c526802b5de9",
+      "to_node_id": "83f3ec56-85eb-406d-888d-51bd453d1c84",
+      "id": "99d91e88-96a7-4789-80af-512981aeb0e5"
+    },
+    {
+      "from_node_id": "32678f66-eb62-4478-a077-47277c155fb1",
+      "to_node_id": "83f3ec56-85eb-406d-888d-51bd453d1c84",
+      "id": "a04683bf-34c6-41cf-9534-ad3390c220ba"
+    }
+  ],
+  "junctions": [
+    "b97adc84-935f-4364-b473-3e4b29a1adc2"
+  ]
+}

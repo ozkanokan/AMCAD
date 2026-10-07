@@ -9,8 +9,9 @@ from core.component_definition import ComponentDefinition
 from core.component_instance import ComponentInstance
 from core.connection import Connection
 from core.port import Node, new_id
+from core.line_geometry import endpoint, routed_geometry, validate_geometry
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def write_json(path, data):
@@ -80,13 +81,42 @@ class Project:
             raise ValueError("Rotation must be a multiple of 90 degrees")
         instance = self.instances[instance_id]
         instance.rotation = (instance.rotation + degrees) % 360
+        self.update_geometry()
 
-    def _check_junction_port(self, node_id):
-        if self.nodes[node_id].kind == "junction" and any(
-                node_id in (c.from_node_id, c.to_node_id) for c in self.connections.values()):
-            raise ValueError("Junction port is occupied; choose a free port or a 4-Way Junction")
+    def port_occupied(self, node_id):
+        return any(node_id in (c.from_node_id, c.to_node_id) for c in self.connections.values())
 
-    def connect(self, a, b):
+    def _check_port(self, node_id):
+        if self.port_occupied(node_id):
+            raise ValueError("Port already has a line (occupied); use an explicit junction to branch")
+
+    def incomplete_ports(self, instance_id):
+        instance = self.instances[instance_id]
+        return [p.id for p in self.definitions[instance.definition_id].ports
+                if p.required and not self.port_occupied(self.node_for(instance_id, p.id).id)]
+
+    def is_complete(self, instance_id):
+        return not self.incomplete_ports(instance_id)
+
+    def set_line_geometry(self, connection_id, controls):
+        c = self.connections[connection_id]
+        a, a_side = endpoint(self, c.from_node_id)
+        b, b_side = endpoint(self, c.to_node_id)
+        c.schematic_geometry = routed_geometry(a, a_side, b, b_side, controls)
+
+    def update_line_geometry(self, connection_id):
+        c = self.connections[connection_id]
+        a, a_side = endpoint(self, c.from_node_id)
+        b, b_side = endpoint(self, c.to_node_id)
+        expected = routed_geometry(a, a_side, b, b_side, c.schematic_geometry.get('controls', []))
+        if expected != c.schematic_geometry:
+            c.schematic_geometry = expected
+
+    def update_geometry(self):
+        for connection_id in self.connections:
+            self.update_line_geometry(connection_id)
+
+    def connect(self, a, b, controls=()):
         if a not in self.nodes or b not in self.nodes:
             raise ValueError("Connection endpoint does not exist")
         if a == b:
@@ -95,12 +125,17 @@ class Project:
             raise ValueError("These ports are already connected")
         if self.nodes[a].instance_id == self.nodes[b].instance_id and self.nodes[a].kind == "junction":
             raise ValueError("Junction ports are already internally connected")
-        self._check_junction_port(a)
-        self._check_junction_port(b)
+        self._check_port(a)
+        self._check_port(b)
         source, target = self.nodes[a], self.nodes[b]
         c = Connection(a, b, from_component_instance_id=source.instance_id, from_port_id=source.port_id,
                        to_component_instance_id=target.instance_id, to_port_id=target.port_id)
         self.connections[c.id] = c
+        try:
+            self.set_line_geometry(c.id, controls)
+        except (ValueError, TypeError):
+            del self.connections[c.id]
+            raise
         return c
 
     def remove_instance(self, instance_id):
@@ -111,6 +146,7 @@ class Project:
         del self.instances[instance_id]
 
     def copy_subgraph(self, instance_ids):
+        self.update_geometry()
         ids = set(instance_ids)
         nodes = {n.id for n in self.nodes.values() if n.instance_id in ids}
         return {"definitions": [self.definitions[k].to_dict() for k in
@@ -132,7 +168,8 @@ class Project:
             added.append(instance.id)
         node_map = {n["id"]: self.node_for(mapping[n["instance_id"]], n["port_id"]).id for n in data["nodes"]}
         for c in data["connections"]:
-            self.connect(node_map[c["from_node_id"]], node_map[c["to_node_id"]])
+            controls = [[x + offset, y + offset] for x, y in c['schematic_geometry']['controls']]
+            self.connect(node_map[c["from_node_id"]], node_map[c["to_node_id"]], controls)
         return added
 
     def validate(self):
@@ -163,7 +200,7 @@ class Project:
             if n.kind != kind:
                 raise ValueError("Node kind disagrees with component definition")
         pairs = set()
-        occupied_junction_ports = set()
+        occupied_ports = set()
         for c in self.connections.values():
             if c.from_node_id not in self.nodes or c.to_node_id not in self.nodes or c.from_node_id == c.to_node_id:
                 raise ValueError("Invalid connection endpoints")
@@ -174,10 +211,14 @@ class Project:
             if source.kind == "junction" and source.instance_id == target.instance_id:
                 raise ValueError("Junction ports are already internally connected")
             for node in (source, target):
-                if node.kind == "junction":
-                    if node.id in occupied_junction_ports:
-                        raise ValueError("Junction port is occupied by multiple connections")
-                    occupied_junction_ports.add(node.id)
+                if node.id in occupied_ports:
+                    raise ValueError("Port is occupied by multiple lines; use an explicit junction")
+                occupied_ports.add(node.id)
+            validate_geometry(c.schematic_geometry)
+            a, a_side = endpoint(self, c.from_node_id)
+            b, b_side = endpoint(self, c.to_node_id)
+            if c.schematic_geometry != routed_geometry(a, a_side, b, b_side, c.schematic_geometry['controls']):
+                raise ValueError('Saved line geometry disagrees with its port endpoints or controls')
             pair = frozenset((c.from_node_id, c.to_node_id))
             if pair in pairs:
                 raise ValueError("Duplicate connection")
@@ -185,6 +226,7 @@ class Project:
         return self
 
     def to_dict(self):
+        self.update_geometry()
         self.validate()
         return {"schema": "amcad.project", "schema_version": SCHEMA_VERSION,
                 "project": dict(self.metadata),
@@ -198,11 +240,15 @@ class Project:
     def from_dict(cls, data):
         if not isinstance(data, dict):
             raise ValueError("Project JSON must be an object")
-        if data.get("schema") != "amcad.project" or data.get("schema_version") not in (1, SCHEMA_VERSION):
+        if data.get("schema") != "amcad.project" or data.get("schema_version") not in (1, 2, SCHEMA_VERSION):
             raise ValueError("Unsupported project schema/version")
         if data["schema_version"] == 1:
             from core.migration import migrate_v1
             data = migrate_v1(data)
+        legacy = data['schema_version'] < SCHEMA_VERSION
+        if legacy:
+            from core.migration import migrate_v2_branches
+            data = migrate_v2_branches(data)
         p = cls()
         p.metadata = dict(data["project"])
         for key, target, constructor in (
@@ -217,6 +263,8 @@ class Project:
                 target[item.id] = item
         if set(data["junctions"]) != {n.id for n in p.nodes.values() if n.kind == "junction"}:
             raise ValueError("Junction index disagrees with nodes")
+        if legacy:
+            p.update_geometry()
         return p.validate()
 
     def save(self, path):

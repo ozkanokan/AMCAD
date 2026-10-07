@@ -10,12 +10,21 @@ class PortItem(QGraphicsEllipseItem):
         self.canvas = canvas
         self.side = side
         self.setPen(QPen(QColor('#17657a'), 1.6))
-        self.idle_color = '#23465c' if parent.kind == 'junction' else '#ffffff'
+        self.idle_color = '#ffffff'
         self.setBrush(QBrush(QColor(self.idle_color)))
         self.setZValue(5)
         self.setAcceptHoverEvents(True)
         self.setCursor(Qt.CrossCursor)
-        self.setToolTip(label + '\nClick, then click another port to connect. Escape cancels.')
+        self.setToolTip(label + '\nDraw Line: click a free port, place bends, then click a free target. Escape cancels.')
+
+    def refresh(self):
+        node=self.canvas.project.nodes[self.node_id]
+        definition=self.canvas.project.definitions[self.canvas.project.instances[node.instance_id].definition_id]
+        required=next(p.required for p in definition.ports if p.id==node.port_id)
+        missing=required and not self.canvas.project.port_occupied(self.node_id)
+        self.idle_color='#fff1d7' if missing else '#ffffff'
+        self.setPen(QPen(QColor('#ad772d' if missing else '#17657a'),1.6))
+        self.setBrush(QBrush(QColor('#f5b942' if self.canvas.pending_node==self.node_id else self.idle_color)))
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:

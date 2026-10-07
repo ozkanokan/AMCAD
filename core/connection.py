@@ -11,3 +11,4 @@ class Connection:
     from_port_id: str | None = None
     to_component_instance_id: str | None = None
     to_port_id: str | None = None
+    schematic_geometry: dict = field(default_factory=dict)

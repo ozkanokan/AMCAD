@@ -22,6 +22,8 @@ class ComponentDefinition:
         if not ids or len(ids) != len(set(ids)):
             raise ValueError("Each component needs uniquely identified ports")
         for p in self.ports:
+            if not isinstance(p.required, bool):
+                raise ValueError("Port required must be true or false")
             if not p.id.strip() or not p.display_name.strip() or not p.port_type.strip():
                 raise ValueError("Port ID, display name and type are required")
             if p.side not in {"LEFT", "RIGHT", "TOP", "BOTTOM"}:

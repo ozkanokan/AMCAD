@@ -1,8 +1,8 @@
-# V1.3a cavity profile contract
+# V1.4 cavity profile contract
 
 `ComponentDefinition.physical` contains `cavity_type` (NONE or REVOLVED_PROFILE),
 `cavity_profile` and `hydraulic_interfaces`. NONE has no profile or interfaces.
-Existing files without this block load as NONE. Project and graph schema 4 embed
+Existing files without this block load as NONE. Project and graph schema 5 embed
 one definition per definition ID; instances retain only their definition reference.
 
 A profile has a persistent `id`, `schema_version: 1`, `units: "mm"`, ordered
@@ -15,7 +15,8 @@ A profile has a persistent `id`, `schema_version: 1`, `units: "mm"`, ordered
 Each vertex stores `id`, `z`, `r` and `corner`. Coordinates are finite, Y >= 0.
 The UI uses Z horizontally and Y vertically; **R means fillet radius only**.
 The persisted `r` coordinate, interface `r_mm` and `revolve_axis_r_mm` datum key
-remain unchanged for V1.3 compatibility. No project/profile version bump is needed.
+remain unchanged for V1.3 compatibility. The profile remains version 1; project
+and graph version 5 adds surface-port metadata without changing profile geometry.
 The ordered open profile represents one half-section; it need not close to the
 axis. The point table shows round-trippable decimal coordinates without discarding
 stored precision, independently of mouse grid snap. Numeric editors use the C
@@ -70,7 +71,7 @@ persisted and never alter authoritative geometry.
 
 Each marker has a persistent `id`, `hydraulic_port_id`, `interface_type`, `z_mm`,
 nullable `r_mm`, `nominal_connection_diameter_mm` and `preferred_direction`.
-Types are AXIAL/RADIAL; directions are AXIAL_POSITIVE, AXIAL_NEGATIVE, RADIAL or
+Legacy types are AXIAL/RADIAL; directions are AXIAL_POSITIVE, AXIAL_NEGATIVE, RADIAL or
 UNSPECIFIED. Coordinates are finite, supplied Y is nonnegative, diameter is positive.
 The port ID must exist in the schematic definition. V1.3 allows one marker per
 port and rejects duplicate IDs/mappings. Missing required-port mappings warn but
@@ -78,7 +79,8 @@ do not block saving a valid profile. NONE definitions need no mappings.
 
 Markers are physical metadata, not schematic nodes or extra hydraulic edges.
 The list and separate profile version leave room for future typed geometry and
-interface extensions; no future geometry operations are implemented here.
+interface extensions. V1.4 adds SURFACE anchors, normalized 3D direction, channel
+sections/rotation and visualization length; see [cavity-surface.md](cavity-surface.md).
 
 ## Validation and preview
 
@@ -87,7 +89,8 @@ negative Y, adjacent retracing, nonadjacent segment intersections/touches and
 invalid or overlapping treatments. Additional treated-profile intersection checks
 use temporary arc sampling. These checks detect obvious conflicts and are not a
 CAD constraint solver or a proof of manufacturability. Stored geometry stays exact;
-temporary sampling is never persisted. The preview mirrors the cross-section only.
+temporary sampling is never persisted. The mirrored cross-section remains available;
+V1.4 also revolves evaluated segments/arcs into an open visualization mesh.
 
 The parallel check-valve example uses illustrative dimensions, not a commercial
 cavity specification. The existing C1–R project remains available and unchanged.

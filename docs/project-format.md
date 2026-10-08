@@ -1,7 +1,10 @@
-# V1.3a project and graph contracts
+# V1.4 project and graph contracts
 
 Formats are UTF-8 JSON with `schema` and integer `schema_version`. Current
-version is **4**. Version 1/2 projects migrate topology explicitly on load.
+version is **5**. Version 1/2 projects migrate topology explicitly on load.
+Version 4 physical profiles load unchanged; missing 3D interface fields use legacy
+fixed-position AXIAL/RADIAL interpretation. Anchored fields are documented in
+[cavity-surface.md](cavity-surface.md). Meshes are not persisted.
 Version 3 keeps its geometry and gains NONE physical definitions when absent. Graph exports
 are output-only. Unsupported versions are rejected. Save validates and atomically
 replaces its target using a temporary sibling file; load completes before
@@ -104,7 +107,7 @@ junction ports, invalid endpoints and duplicate records are rejected.
 
 Old lines receive initial orthogonal geometry and all old ports default to
 Required unless already marked Optional. Opening never rewrites files. Saving
-writes version 4. This migration is limited to old files: the editing UI never
+writes version 5. This migration is limited to old files: the editing UI never
 automatically inserts junctions or branches on line clicks.
 
 The original project is preserved in `tests/fixtures/c1_r.v1.json`; the current

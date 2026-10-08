@@ -1,12 +1,14 @@
-# AMCAD — Hydraulic Manifold Schematic Editor (V1.3a)
+# AMCAD — Hydraulic Manifold Schematic Editor (V1.4)
 
 A standalone Python / PySide6 desktop editor for hydraulic schematics and their
-graph foundation. V1.3a refines the dedicated axisymmetric cavity sketcher with
-an editable engineering point table, Draw/Edit modes, parametric corner leaders,
-physical hydraulic-interface mappings and a mirrored cross-section preview.
+graph foundation. V1.4 extends the existing axisymmetric cavity sketcher with
+synchronized YZ/XZ/XY/ISO views, surface-anchored hydraulic ports, arbitrary 3D
+channel directions and circle/slot/rectangle channel previews. The point table,
+Draw/Edit modes, parametric corners and engineering leaders remain available.
 Existing manual line editing, component wizard, JSON projects, undo/redo and
 graph export remain available. No CAD kernel, physical manifold routing,
-hydraulic simulation or 3D geometry generation is implemented.
+hydraulic simulation, Boolean operations or manufacturing geometry is implemented.
+Visualization uses PySide6 software rendering; no new dependencies are required.
 
 ## Setup and run
 
@@ -38,7 +40,7 @@ QT_QPA_PLATFORM=offscreen python -m pytest -q
 QT_QPA_PLATFORM=offscreen python -m app.main examples/c1_r.amcad.json --smoke
 ```
 
-All **211 tests** and both sample application launch checks pass on Python 3.14.4 under
+All **247 tests** and all three sample application launch checks pass on Python 3.14.4 under
 Linux. Tests exercise the wizard, drag/drop, manual drawing, segment and bend
 drags, rotation, single-line occupancy, geometry persistence, undo/redo,
 copy/paste, legacy migration, completeness, crossings and graph export. Cavity tests cover
@@ -47,6 +49,9 @@ definitions, library/project persistence and GUI save/reopen. V1.3a checks also
 exercise treated-corner dragging, marker placement followed by editing, Escape
 cancellation, feature preservation during insertion, and decimal periods under
 a non-English default locale.
+V1.4 tests cover revolved coordinates/open ends, surface picking, stable anchors,
+direction normalization, section frames/rotation, channel geometry, invalid-anchor
+recovery, synchronized selection, dark-theme contrast and JSON round trips.
 `--smoke` renders the actual window and exits. Native Windows/macOS displays and
 executable packaging have not been validated.
 
@@ -176,6 +181,63 @@ Dimension leaders and tangent points are derived and never become saved vertices
 See [cavity geometry conventions](docs/cavity-profile.md) for the exact parameter
 meaning, datum and validation limits.
 
+## Four-view surface and hydraulic port editor
+
+The cavity editor contains resizable **YZ**, **XZ**, **XY** and **ISO** panes.
+YZ retains the authoritative Z-horizontal/Y-radial profile editor. XZ shows Z
+horizontally and X vertically; XY shows X horizontally and Y vertically. ISO
+is an orthographic 3D camera. The evaluated profile revolves around Z with open
+end rings; the surface is never automatically capped or turned into a solid.
+
+1. Draw/edit the profile in YZ or its table, then inspect the surface in ISO.
+2. Choose **Add Port — pick cavity surface**, then click a surface in ISO, XZ or XY.
+   Picking records the persistent segment/feature, its along-feature parameter
+   and circumferential angle. It initializes direction from the local wall normal.
+3. Assign an existing schematic port ID. Edit **dx/dy/dz**, cross section and
+   section rotation; the direction is normalized. Circle uses diameter, slot uses
+   width and overall capsule length, rectangle uses width/height. Sizes must be
+   positive; slot length must be at least its width.
+4. Set **Preview length** to visualize the finite channel. It is visualization-only,
+   never a drilling depth or routing constraint. Channels may overlap the cavity;
+   there is no intersection calculation, trimming or Boolean subtraction.
+5. Click a port's marker or channel in a projection, or its table row, to highlight
+   it in all views. Double-click a port or use **Edit Selected Interface**. The
+   dialog also allows changing its surface feature/parameter/angle explicitly.
+6. Save/reopen: anchors, normalized direction, section, rotation and preview length
+   persist on the reusable definition; meshes and resolved XYZ are recomputed.
+
+Wheel zooms in every pane. Middle drag pans YZ; middle/right drag pans the other
+panes. ISO left drag orbits; empty left drag pans orthographic projections.
+**Fit** fits all four panes. Escape cancels surface-port placement without closing
+the editor. Profile edits regenerate all views and anchored port positions.
+Removing/replacing an anchored corner or inserting between an anchored vertex pair
+marks the port **INVALID anchor**. It is hidden from geometric previews and remains
+in the table/JSON for explicit reattachment; it is never moved to another feature.
+
+Older AXIAL/RADIAL interfaces remain at their original fixed positions, with
+compatible default channel directions and circular sections. **Place Interface
+Marker** retains the original YZ placement workflow. Its marker dialog now also
+supports arbitrary direction and section editing. The legacy radial `r_mm` field
+still displays as Y in that workflow; anchored ports use their resolved XYZ in
+projections. See [surface/port format](docs/cavity-surface.md).
+
+For immediate evaluation, open [the V1.4 surface demo](examples/parallel_check_valves_3d.amcad.json)
+and edit CV1's definition cavity. CV1/CV2 share one illustrative profile with a
+circle IN channel and inclined slot OUT channel. Dimensions are not a commercial
+valve cavity standard. The [graph](examples/parallel_check_valves_3d.graph.json)
+contains the same definition/port data and schematic topology.
+
+```bash
+python -m app.main examples/parallel_check_valves_3d.amcad.json
+QT_QPA_PLATFORM=offscreen python -m app.main examples/parallel_check_valves_3d.amcad.json --smoke
+python -m examples.create_surface_demo
+```
+
+These are software-rendered visualization meshes with finite tessellation and
+depth-sorted transparency, not precise CAD surfaces. Dense profiles may render
+more slowly; overlapping channels/transparent faces can be visually ambiguous.
+No Rhino, STEP, routing, CFD or solid operations are included.
+
 ## Parallel check-valve physical demo
 
 Open [the separate project](examples/parallel_check_valves.amcad.json): IN → J1
@@ -225,7 +287,8 @@ UUIDs. Manual visual geometry is separate, under `schematic_geometry`, and is
 excluded from logical graph export. Junction ports share internal `JUNCTION`
 relationships, preserving the common hydraulic net without extra physical lines.
 
-Project/graph schema version **4** adds definition-level physical data; version 3
+Project/graph schema version **5** adds anchored 3D hydraulic-interface parameters.
+Version 4 introduced definition-level physical data; version 3
 introduced manual geometry and required-port metadata. Version 3 loads without
 changing its manual geometry; missing physical data defaults to NONE.
 Version 1/2 projects migrate deterministically on load. With the authorized

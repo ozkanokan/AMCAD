@@ -3,6 +3,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field, asdict
 import math
 from core.port import new_id
+from core.cavity_surface import SurfaceAnchor, ChannelSection, normalized, finite_number, resolve_anchor
 
 EPS = 1e-9
 
@@ -59,12 +60,43 @@ class HydraulicInterface:
     nominal_connection_diameter_mm: float = 4
     preferred_direction: str = 'UNSPECIFIED'
     id: str = field(default_factory=new_id)
+    surface_anchor: SurfaceAnchor | None = None
+    direction: tuple | None = None
+    section: ChannelSection | None = None
+    section_rotation_deg: float = 0
+    preview_length_mm: float = 10
+
+    def __post_init__(self):
+        if self.direction is not None:
+            unit = normalized(self.direction)
+            self.direction = tuple(self.direction) if abs(math.hypot(*self.direction)-1)<1e-12 else unit
+
+    @classmethod
+    def from_dict(cls, data):
+        data = deepcopy(data)
+        if data.get('surface_anchor') is not None:
+            data['surface_anchor'] = SurfaceAnchor(**data['surface_anchor'])
+        if data.get('section') is not None:
+            data['section'] = ChannelSection(**data['section'])
+        if data.get('direction') is not None:
+            data['direction'] = tuple(data['direction'])
+        return cls(**data)
 
     def validate(self, port_ids):
         if self.hydraulic_port_id not in port_ids:
             raise ValueError('Interface references an unknown schematic port ID')
-        if self.interface_type not in ('AXIAL','RADIAL'):
-            raise ValueError('Interface type must be AXIAL or RADIAL')
+        if self.interface_type not in ('AXIAL','RADIAL','SURFACE'):
+            raise ValueError('Interface type must be AXIAL, RADIAL or SURFACE')
+        if self.interface_type=='SURFACE' and self.surface_anchor is None:
+            raise ValueError('Surface interface needs an anchor')
+        if self.surface_anchor is not None: self.surface_anchor.validate()
+        if self.direction is not None:
+            unit=normalized(self.direction)
+            if abs(math.hypot(*self.direction)-1)>1e-12: self.direction=unit
+        if self.section is not None: self.section.validate()
+        finite_number(self.section_rotation_deg,'Section rotation')
+        if finite_number(self.preview_length_mm,'Preview length')<=0:
+            raise ValueError('Preview length must be positive')
         if self.preferred_direction not in ('AXIAL_POSITIVE','AXIAL_NEGATIVE','RADIAL','UNSPECIFIED'):
             raise ValueError('Invalid preferred routing direction')
         finite(self.z_mm,'Interface Z')
@@ -277,7 +309,7 @@ class PhysicalDefinition:
     def from_dict(cls,data):
         data=deepcopy(data)
         if data.get('cavity_profile') is not None: data['cavity_profile']=CavityProfile.from_dict(data['cavity_profile'])
-        data['hydraulic_interfaces']=[HydraulicInterface(**i) for i in data.get('hydraulic_interfaces',[])]
+        data['hydraulic_interfaces']=[HydraulicInterface.from_dict(i) for i in data.get('hydraulic_interfaces',[])]
         return cls(**data)
 
     def validate(self,ports):
@@ -297,4 +329,9 @@ class PhysicalDefinition:
     def warnings(self,ports):
         if self.cavity_type=='NONE': return []
         mapped={i.hydraulic_port_id for i in self.hydraulic_interfaces}
-        return [f'Required port {p.id} has no physical interface' for p in ports if p.required and p.id not in mapped]
+        warnings=[f'Required port {p.id} has no physical interface' for p in ports if p.required and p.id not in mapped]
+        for interface in self.hydraulic_interfaces:
+            if interface.surface_anchor is not None:
+                try: resolve_anchor(self.cavity_profile,interface.surface_anchor)
+                except ValueError as error: warnings.append(f'Port {interface.hydraulic_port_id}: INVALID anchor — {error}')
+        return warnings

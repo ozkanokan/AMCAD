@@ -30,7 +30,7 @@ def test_visual_creation_drag_snap_numeric_insert_delete(qapp):
     editor=CavityEditor(ports); editor.show(); qapp.processEvents()
     assert editor.validity.text().startswith('INVALID')
     editor.view.resetTransform(); editor.view.scale(25,25); editor.view.centerOn(10,-5)
-    for z,r in [(0.26,4.74),(10,5),(10,8),(25,8)]:
+    for z,r in [(0.31,4.74),(10,5),(10,8),(25,8)]:
         click_point(editor,z,r); qapp.processEvents()
     assert len(editor.profile.vertices)==4
     first=editor.profile.vertices[0]
@@ -163,7 +163,7 @@ def test_physical_demo_launch_graph_and_existing_c1_r_preserved(qapp,tmp_path):
     assert definition.physical.cavity_type=='REVOLVED_PROFILE'
     assert {i.hydraulic_port_id for i in definition.physical.hydraulic_interfaces}=={'IN','OUT'}
     assert all(p.is_complete(i.id) for i in p.instances.values())
-    assert p.to_dict()['schema_version']==4
+    assert p.to_dict()['schema_version']==5
     assert export_graph(p)==json.loads((ROOT/'examples/parallel_check_valves.graph.json').read_text())
     assert sum(d['physical']['cavity_type']=='REVOLVED_PROFILE' for d in export_graph(p)['component_definitions'])==1
     w=MainWindow(tmp_path/'library'); w.load_path(demo); w.show(); qapp.processEvents()

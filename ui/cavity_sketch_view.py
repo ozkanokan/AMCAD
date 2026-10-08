@@ -6,6 +6,19 @@ from PySide6.QtWidgets import (QGraphicsView, QGraphicsScene, QGraphicsEllipseIt
 from PySide6.QtCore import Qt, Signal, QPointF, QRectF
 from PySide6.QtGui import QPainter, QPainterPath, QPainterPathStroker, QPen, QColor, QPolygonF
 from core.cavity import snapped, point
+from core.cavity_surface import interface_pose, channel_mesh
+
+
+def hull(points):
+    points=sorted(set(points))
+    def turn(a,b,c): return (b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0])
+    def half(sequence):
+        result=[]
+        for p in sequence:
+            while len(result)>1 and turn(result[-2],result[-1],p)<=0: result.pop()
+            result.append(p)
+        return result
+    return half(points)[:-1]+half(reversed(points))[:-1] if len(points)>1 else points
 
 
 def profile_path(profile, mirror=False):
@@ -133,7 +146,7 @@ class CavitySketchView(QGraphicsView):
     escape_requested = Signal()
 
     AXIS_LABEL = 'Revolve axis: Y = 0; Z → (mm)'
-    DATUM_LABEL = 'Z=0 mounting face; Y ↑ (mm)'
+    DATUM_LABEL = 'YZ • Z=0 mounting face; Y ↑ (mm)'
 
     def __init__(self, profile, interfaces):
         super().__init__()
@@ -146,6 +159,7 @@ class CavitySketchView(QGraphicsView):
         self.mirrored = False
         self.point_items = {}
         self.marker_items = {}
+        self.marker_labels = {}; self.channel_items = {}
         self.path_item = None
         self.mirror_item = None
         self.construction_item = None
@@ -185,6 +199,7 @@ class CavitySketchView(QGraphicsView):
         self.point_selected.emit(points[0].vertex.id if points else '')
         self.marker_selected.emit(markers[0].interface.id if markers else '')
         self.refresh_construction()
+        self.update_interfaces()
 
     def select_vertex(self, vertex_id):
         self.scene().blockSignals(True)
@@ -207,6 +222,7 @@ class CavitySketchView(QGraphicsView):
         self.scene().blockSignals(True)
         self.point_items = {}
         self.marker_items = {}
+        self.marker_labels = {}; self.channel_items = {}
         self.hovered_id = None
         self.scene().clear()
         self.path_item = QGraphicsPathItem()
@@ -247,6 +263,7 @@ class CavitySketchView(QGraphicsView):
         except ValueError:
             self.dimensions = []
         self.refresh_construction()
+        self.update_interfaces()
         self.viewport().update()
 
     def refresh_construction(self):
@@ -273,11 +290,34 @@ class CavitySketchView(QGraphicsView):
             marker = InterfaceMarkerItem(interface)
             self.marker_items[interface.id] = marker
             self.scene().addItem(marker)
+            channel=QGraphicsPathItem(); channel.setPen(QPen(Qt.NoPen)); channel.setAcceptedMouseButtons(Qt.NoButton)
+            channel.setZValue(-1); self.scene().addItem(channel); self.channel_items[interface.id]=channel
             text = self.scene().addSimpleText(f'{interface.hydraulic_port_id} ({interface.interface_type})')
+            self.marker_labels[interface.id]=text
             text.setFlag(QGraphicsItem.ItemIgnoresTransformations)
             text.setPos(interface.z_mm + .5, -(interface.r_mm or 0) - .5)
             text.setBrush(QColor('#8b4f15'))
             text.setAcceptedMouseButtons(Qt.NoButton)
+
+    def update_interfaces(self):
+        for interface in self.interfaces:
+            if interface.id not in self.marker_items: continue
+            marker=self.marker_items[interface.id]; text=self.marker_labels[interface.id]; channel=self.channel_items[interface.id]
+            try:
+                xyz,_=interface_pose(self.profile,interface)
+                mesh=channel_mesh(self.profile,interface)
+            except ValueError:
+                marker.hide(); text.hide(); channel.hide(); continue
+            marker.show(); text.show(); channel.show()
+            marker.setPos(xyz[2],-xyz[1]); text.setPos(xyz[2]+.5,-xyz[1]-.5)
+            polygon=hull([(v[2],-v[1]) for v in mesh.vertices])
+            path=QPainterPath()
+            if polygon:
+                path.moveTo(*polygon[0])
+                for p in polygon[1:]: path.lineTo(*p)
+                path.closeSubpath()
+            channel.setPath(path); channel.setBrush(QColor('#ffcf65' if marker.isSelected() else '#e3a464'))
+            channel.setOpacity(.45)
 
     def clear_preview(self):
         if self.preview_item is not None:
@@ -472,14 +512,18 @@ class CavitySketchView(QGraphicsView):
         painter.restore()
 
     def fit_profile(self):
-        points = [(v.z, v.r) for v in self.profile.vertices] + [(i.z_mm, i.r_mm or 0) for i in self.interfaces]
+        points = [(v.z, v.r) for v in self.profile.vertices]
+        if self.mirrored: points.extend((v.z,-v.r) for v in self.profile.vertices)
+        for interface in self.interfaces:
+            try:
+                mesh=channel_mesh(self.profile,interface)
+                points.extend((p[2],p[1]) for p in mesh.vertices)
+            except ValueError: pass
         if not points:
             return
         zs = [p[0] for p in points] + [0]
         ys = [p[1] for p in points] + [0]
         rect = QRectF(min(zs), -max(ys), max(zs)-min(zs), max(ys)-min(ys))
-        if self.mirrored:
-            rect.setBottom(max(ys))
         self.fitInView(rect.adjusted(-3, -4, 5, 3), Qt.KeepAspectRatio)
         if self.transform().m11() > 80:
             self.resetTransform()

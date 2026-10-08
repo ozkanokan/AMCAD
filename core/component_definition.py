@@ -60,7 +60,11 @@ class ComponentDefinition:
         return self
 
     def to_dict(self):
-        return asdict(self)
+        data=asdict(self)
+        for interface in data['physical']['hydraulic_interfaces']:
+            if interface['direction'] is not None:
+                interface['direction']=list(interface['direction'])
+        return data
 
     @classmethod
     def from_dict(cls, data):

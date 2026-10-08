@@ -11,7 +11,7 @@ from core.connection import Connection
 from core.port import Node, new_id
 from core.line_geometry import endpoint, routed_geometry, validate_geometry
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 
 def write_json(path, data):
@@ -249,7 +249,7 @@ class Project:
     def from_dict(cls, data):
         if not isinstance(data, dict):
             raise ValueError("Project JSON must be an object")
-        if data.get("schema") != "amcad.project" or data.get("schema_version") not in (1, 2, 3, SCHEMA_VERSION):
+        if data.get("schema") != "amcad.project" or data.get("schema_version") not in (1, 2, 3, 4, SCHEMA_VERSION):
             raise ValueError("Unsupported project schema/version")
         if data["schema_version"] == 1:
             from core.migration import migrate_v1

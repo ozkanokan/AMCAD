@@ -1,6 +1,6 @@
 {
   "schema": "amcad.hydraulic_graph",
-  "schema_version": 4,
+  "schema_version": 5,
   "component_definitions": [
     {
       "id": "external-port",

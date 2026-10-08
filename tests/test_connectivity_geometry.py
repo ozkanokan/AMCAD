@@ -241,7 +241,7 @@ def test_existing_sample_gui_migration_undo_copy_and_export(qapp,tmp_path):
     assert Project.load(tmp_path/'upgraded.json').to_dict()==before
     w.export_to(tmp_path/'graph.json')
     graph=json.loads((tmp_path/'graph.json').read_text())
-    assert graph['schema_version']==4
+    assert graph['schema_version']==5
     assert len(graph['routing_connections'])==6 and len(graph['junction_instances'])==2
     assert graph['junction_instances'][0]['capacity']==3
     assert SAMPLE.read_text()==json.dumps(raw,indent=2)+'\n'  # Original V1 file was not rewritten.

@@ -1,6 +1,10 @@
 {
-  "schema": "amcad.hydraulic_graph",
+  "schema": "amcad.project",
   "schema_version": 5,
+  "project": {
+    "id": "c892e6b1-c0d8-4745-b113-31c87675aeee",
+    "name": "Illustrative parallel Check Valve \u2014 V1.4a closed cavity"
+  },
   "component_definitions": [
     {
       "id": "external-port",
@@ -145,7 +149,7 @@
           "vertices": [
             {
               "z": 0,
-              "r": 7,
+              "r": 0,
               "id": "e776bff6-689f-4674-a477-5565627ff131",
               "corner": {
                 "type": "SHARP",
@@ -200,7 +204,7 @@
             },
             {
               "z": 28,
-              "r": 3,
+              "r": 0,
               "id": "07a56ba2-54b6-456b-812a-eb51f044f68f",
               "corner": {
                 "type": "SHARP",
@@ -224,7 +228,7 @@
             "hydraulic_port_id": "IN",
             "interface_type": "SURFACE",
             "z_mm": 26.4,
-            "r_mm": 3.0,
+            "r_mm": 0.5999999999999996,
             "nominal_connection_diameter_mm": 4,
             "preferred_direction": "AXIAL_POSITIVE",
             "id": "e6031f31-fa2c-4100-834b-3c77b9a88205",
@@ -236,9 +240,9 @@
               "angle_deg": 0
             },
             "direction": [
-              0,
-              0,
-              1
+              0.0,
+              0.0,
+              1.0
             ],
             "section": {
               "type": "CIRCLE",
@@ -248,8 +252,8 @@
               "height_mm": 4
             },
             "section_rotation_deg": 0,
-            "preview_length_mm": 12,
-            "preview_mode": "FORWARD"
+            "preview_length_mm": 2,
+            "preview_mode": "CENTERED"
           },
           {
             "hydraulic_port_id": "OUT",
@@ -279,53 +283,61 @@
               "height_mm": 4
             },
             "section_rotation_deg": 20,
-            "preview_length_mm": 10,
-            "preview_mode": "FORWARD"
+            "preview_length_mm": 2,
+            "preview_mode": "CENTERED"
           }
         ]
       }
     }
   ],
-  "project": {
-    "id": "c892e6b1-c0d8-4745-b113-31c87675aeee",
-    "name": "Illustrative parallel Check Valve \u2014 surface/channel demonstrator"
-  },
   "component_instances": [
     {
-      "id": "963dd6ec-89fb-47ed-902c-377387e7c9c7",
+      "definition_id": "external-port",
       "name": "IN",
-      "definition_id": "external-port",
-      "definition_name": "External Port"
+      "x": -340,
+      "y": 0,
+      "rotation": 0,
+      "id": "963dd6ec-89fb-47ed-902c-377387e7c9c7"
     },
     {
-      "id": "1daa9cb9-3068-430a-b188-2136b7ad2942",
-      "name": "J1",
       "definition_id": "junction-3",
-      "definition_name": "3-Way Junction"
+      "name": "J1",
+      "x": -180,
+      "y": 0,
+      "rotation": 0,
+      "id": "1daa9cb9-3068-430a-b188-2136b7ad2942"
     },
     {
-      "id": "71363e9e-218a-46f8-b037-b3c0616a4cbb",
+      "definition_id": "illustrative-check-valve",
       "name": "CV1",
-      "definition_id": "illustrative-check-valve",
-      "definition_name": "Illustrative Check Valve"
+      "x": 40,
+      "y": -100,
+      "rotation": 0,
+      "id": "71363e9e-218a-46f8-b037-b3c0616a4cbb"
     },
     {
-      "id": "7507f560-7efa-4341-9b06-4d43d66f2716",
+      "definition_id": "illustrative-check-valve",
       "name": "CV2",
-      "definition_id": "illustrative-check-valve",
-      "definition_name": "Illustrative Check Valve"
+      "x": 40,
+      "y": 100,
+      "rotation": 0,
+      "id": "7507f560-7efa-4341-9b06-4d43d66f2716"
     },
     {
-      "id": "92652dbb-e4ef-44fb-a1ab-2e00b00219e9",
+      "definition_id": "external-port",
       "name": "OUT1",
-      "definition_id": "external-port",
-      "definition_name": "External Port"
+      "x": 300,
+      "y": -100,
+      "rotation": 180,
+      "id": "92652dbb-e4ef-44fb-a1ab-2e00b00219e9"
     },
     {
-      "id": "52d6a082-790a-4dc4-b23e-9afd83bcc8fe",
-      "name": "OUT2",
       "definition_id": "external-port",
-      "definition_name": "External Port"
+      "name": "OUT2",
+      "x": 300,
+      "y": 100,
+      "rotation": 180,
+      "id": "52d6a082-790a-4dc4-b23e-9afd83bcc8fe"
     }
   ],
   "nodes": [
@@ -333,121 +345,64 @@
       "id": "02f68ac6-3cbb-48de-8d47-cb03d7f2db42",
       "instance_id": "963dd6ec-89fb-47ed-902c-377387e7c9c7",
       "port_id": "port",
-      "kind": "external_port",
-      "label": "IN",
-      "port_type": "HYDRAULIC",
-      "flow_direction": "UNSPECIFIED",
-      "required": true
+      "kind": "external_port"
     },
     {
       "id": "f127855f-0098-4320-8eca-54692cffbc76",
       "instance_id": "1daa9cb9-3068-430a-b188-2136b7ad2942",
       "port_id": "LEFT",
-      "kind": "junction",
-      "label": "J1.LEFT",
-      "port_type": "HYDRAULIC",
-      "flow_direction": "BIDIRECTIONAL",
-      "required": true
+      "kind": "junction"
     },
     {
       "id": "621da5f1-7035-4dda-b872-4ff00b0e0974",
       "instance_id": "1daa9cb9-3068-430a-b188-2136b7ad2942",
       "port_id": "RIGHT",
-      "kind": "junction",
-      "label": "J1.RIGHT",
-      "port_type": "HYDRAULIC",
-      "flow_direction": "BIDIRECTIONAL",
-      "required": true
+      "kind": "junction"
     },
     {
       "id": "fbec6185-c7a6-404a-b3ff-9011f646eed7",
       "instance_id": "1daa9cb9-3068-430a-b188-2136b7ad2942",
       "port_id": "BOTTOM",
-      "kind": "junction",
-      "label": "J1.BOTTOM",
-      "port_type": "HYDRAULIC",
-      "flow_direction": "BIDIRECTIONAL",
-      "required": true
+      "kind": "junction"
     },
     {
       "id": "4b3bbb9c-e59d-4945-828d-b95a9572ad3d",
       "instance_id": "71363e9e-218a-46f8-b037-b3c0616a4cbb",
       "port_id": "IN",
-      "kind": "component_port",
-      "label": "CV1.IN",
-      "port_type": "HYDRAULIC",
-      "flow_direction": "IN",
-      "required": true
+      "kind": "component_port"
     },
     {
       "id": "b1960bb0-235d-4df0-aab6-0704d50f2dc6",
       "instance_id": "71363e9e-218a-46f8-b037-b3c0616a4cbb",
       "port_id": "OUT",
-      "kind": "component_port",
-      "label": "CV1.OUT",
-      "port_type": "HYDRAULIC",
-      "flow_direction": "OUT",
-      "required": true
+      "kind": "component_port"
     },
     {
       "id": "d1dbc56b-c3ef-4bfc-9066-ef3887ef6347",
       "instance_id": "7507f560-7efa-4341-9b06-4d43d66f2716",
       "port_id": "IN",
-      "kind": "component_port",
-      "label": "CV2.IN",
-      "port_type": "HYDRAULIC",
-      "flow_direction": "IN",
-      "required": true
+      "kind": "component_port"
     },
     {
       "id": "1a6f5170-3c3b-45e4-a597-6a22fc2a3f76",
       "instance_id": "7507f560-7efa-4341-9b06-4d43d66f2716",
       "port_id": "OUT",
-      "kind": "component_port",
-      "label": "CV2.OUT",
-      "port_type": "HYDRAULIC",
-      "flow_direction": "OUT",
-      "required": true
+      "kind": "component_port"
     },
     {
       "id": "ec1b5481-bd6b-4419-8829-68275c38b9f1",
       "instance_id": "92652dbb-e4ef-44fb-a1ab-2e00b00219e9",
       "port_id": "port",
-      "kind": "external_port",
-      "label": "OUT1",
-      "port_type": "HYDRAULIC",
-      "flow_direction": "UNSPECIFIED",
-      "required": true
+      "kind": "external_port"
     },
     {
       "id": "5583958f-a9bb-4701-b634-e26ce1ee9d6c",
       "instance_id": "52d6a082-790a-4dc4-b23e-9afd83bcc8fe",
       "port_id": "port",
-      "kind": "external_port",
-      "label": "OUT2",
-      "port_type": "HYDRAULIC",
-      "flow_direction": "UNSPECIFIED",
-      "required": true
+      "kind": "external_port"
     }
   ],
-  "junctions": [
-    "f127855f-0098-4320-8eca-54692cffbc76",
-    "621da5f1-7035-4dda-b872-4ff00b0e0974",
-    "fbec6185-c7a6-404a-b3ff-9011f646eed7"
-  ],
-  "junction_instances": [
-    {
-      "id": "1daa9cb9-3068-430a-b188-2136b7ad2942",
-      "name": "J1",
-      "port_node_ids": [
-        "f127855f-0098-4320-8eca-54692cffbc76",
-        "621da5f1-7035-4dda-b872-4ff00b0e0974",
-        "fbec6185-c7a6-404a-b3ff-9011f646eed7"
-      ],
-      "capacity": 3
-    }
-  ],
-  "routing_connections": [
+  "connections": [
     {
       "from_node_id": "02f68ac6-3cbb-48de-8d47-cb03d7f2db42",
       "to_node_id": "f127855f-0098-4320-8eca-54692cffbc76",
@@ -456,8 +411,31 @@
       "from_port_id": "port",
       "to_component_instance_id": "1daa9cb9-3068-430a-b188-2136b7ad2942",
       "to_port_id": "LEFT",
-      "requires_routing": true,
-      "direction_semantics": "connectivity_only"
+      "schematic_geometry": {
+        "points": [
+          [
+            -320.0,
+            0.0
+          ],
+          [
+            -300.0,
+            0.0
+          ],
+          [
+            -260.0,
+            0.0
+          ],
+          [
+            -220.0,
+            0.0
+          ],
+          [
+            -200.0,
+            0.0
+          ]
+        ],
+        "controls": []
+      }
     },
     {
       "from_node_id": "621da5f1-7035-4dda-b872-4ff00b0e0974",
@@ -467,8 +445,40 @@
       "from_port_id": "RIGHT",
       "to_component_instance_id": "71363e9e-218a-46f8-b037-b3c0616a4cbb",
       "to_port_id": "IN",
-      "requires_routing": true,
-      "direction_semantics": "connectivity_only"
+      "schematic_geometry": {
+        "points": [
+          [
+            -160.0,
+            0.0
+          ],
+          [
+            -140.0,
+            0.0
+          ],
+          [
+            -80,
+            0
+          ],
+          [
+            -80,
+            -100
+          ],
+          [
+            -60.0,
+            -100.0
+          ]
+        ],
+        "controls": [
+          [
+            -80,
+            0
+          ],
+          [
+            -80,
+            -100
+          ]
+        ]
+      }
     },
     {
       "from_node_id": "fbec6185-c7a6-404a-b3ff-9011f646eed7",
@@ -478,8 +488,40 @@
       "from_port_id": "BOTTOM",
       "to_component_instance_id": "7507f560-7efa-4341-9b06-4d43d66f2716",
       "to_port_id": "IN",
-      "requires_routing": true,
-      "direction_semantics": "connectivity_only"
+      "schematic_geometry": {
+        "points": [
+          [
+            -180.0,
+            20.0
+          ],
+          [
+            -180.0,
+            40.0
+          ],
+          [
+            -180,
+            100
+          ],
+          [
+            -80,
+            100
+          ],
+          [
+            -60.0,
+            100.0
+          ]
+        ],
+        "controls": [
+          [
+            -180,
+            100
+          ],
+          [
+            -80,
+            100
+          ]
+        ]
+      }
     },
     {
       "from_node_id": "b1960bb0-235d-4df0-aab6-0704d50f2dc6",
@@ -489,8 +531,36 @@
       "from_port_id": "OUT",
       "to_component_instance_id": "92652dbb-e4ef-44fb-a1ab-2e00b00219e9",
       "to_port_id": "port",
-      "requires_routing": true,
-      "direction_semantics": "connectivity_only"
+      "schematic_geometry": {
+        "points": [
+          [
+            140.0,
+            -100.0
+          ],
+          [
+            160.0,
+            -100.0
+          ],
+          [
+            180,
+            -100
+          ],
+          [
+            260.0,
+            -100.0
+          ],
+          [
+            280.0,
+            -100.0
+          ]
+        ],
+        "controls": [
+          [
+            180,
+            -100
+          ]
+        ]
+      }
     },
     {
       "from_node_id": "1a6f5170-3c3b-45e4-a597-6a22fc2a3f76",
@@ -500,34 +570,41 @@
       "from_port_id": "OUT",
       "to_component_instance_id": "52d6a082-790a-4dc4-b23e-9afd83bcc8fe",
       "to_port_id": "port",
-      "requires_routing": true,
-      "direction_semantics": "connectivity_only"
+      "schematic_geometry": {
+        "points": [
+          [
+            140.0,
+            100.0
+          ],
+          [
+            160.0,
+            100.0
+          ],
+          [
+            180,
+            100
+          ],
+          [
+            260.0,
+            100.0
+          ],
+          [
+            280.0,
+            100.0
+          ]
+        ],
+        "controls": [
+          [
+            180,
+            100
+          ]
+        ]
+      }
     }
   ],
-  "component_internal_relationships": [
-    {
-      "component_instance_id": "1daa9cb9-3068-430a-b188-2136b7ad2942",
-      "from_node_id": "f127855f-0098-4320-8eca-54692cffbc76",
-      "to_node_id": "621da5f1-7035-4dda-b872-4ff00b0e0974",
-      "relationship": "JUNCTION"
-    },
-    {
-      "component_instance_id": "1daa9cb9-3068-430a-b188-2136b7ad2942",
-      "from_node_id": "f127855f-0098-4320-8eca-54692cffbc76",
-      "to_node_id": "fbec6185-c7a6-404a-b3ff-9011f646eed7",
-      "relationship": "JUNCTION"
-    },
-    {
-      "component_instance_id": "71363e9e-218a-46f8-b037-b3c0616a4cbb",
-      "from_node_id": "4b3bbb9c-e59d-4945-828d-b95a9572ad3d",
-      "to_node_id": "b1960bb0-235d-4df0-aab6-0704d50f2dc6",
-      "relationship": "CHECK_VALVE"
-    },
-    {
-      "component_instance_id": "7507f560-7efa-4341-9b06-4d43d66f2716",
-      "from_node_id": "d1dbc56b-c3ef-4bfc-9066-ef3887ef6347",
-      "to_node_id": "1a6f5170-3c3b-45e4-a597-6a22fc2a3f76",
-      "relationship": "CHECK_VALVE"
-    }
+  "junctions": [
+    "f127855f-0098-4320-8eca-54692cffbc76",
+    "621da5f1-7035-4dda-b872-4ff00b0e0974",
+    "fbec6185-c7a6-404a-b3ff-9011f646eed7"
   ]
 }

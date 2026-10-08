@@ -1,7 +1,7 @@
-# AMCAD — Hydraulic Manifold Schematic Editor (V1.4)
+# AMCAD — Hydraulic Manifold Schematic Editor (V1.4a)
 
 A standalone Python / PySide6 desktop editor for hydraulic schematics and their
-graph foundation. V1.4 extends the existing axisymmetric cavity sketcher with
+graph foundation. V1.4a refines the existing axisymmetric cavity sketcher with
 synchronized YZ/XZ/XY/ISO views, surface-anchored hydraulic ports, arbitrary 3D
 channel directions and circle/slot/rectangle channel previews. The point table,
 Draw/Edit modes, parametric corners and engineering leaders remain available.
@@ -49,7 +49,7 @@ definitions, library/project persistence and GUI save/reopen. V1.3a checks also
 exercise treated-corner dragging, marker placement followed by editing, Escape
 cancellation, feature preservation during insertion, and decimal periods under
 a non-English default locale.
-V1.4 tests cover revolved coordinates/open ends, surface picking, stable anchors,
+V1.4/V1.4a tests cover revolved coordinates/open ends, surface picking, stable anchors,
 direction normalization, section frames/rotation, channel geometry, invalid-anchor
 recovery, synchronized selection, dark-theme contrast and JSON round trips.
 `--smoke` renders the actual window and exits. Native Windows/macOS displays and
@@ -134,18 +134,18 @@ entry and choose **Component → Edit Definition Cavity…** (Ctrl+Shift+C), or 
 the component properties dialog. The cavity belongs to the reusable definition:
 all instances share one profile and the same schematic port identities.
 
-- Choose NONE or REVOLVED_PROFILE. New empty profiles start in **Draw mode**;
-  populated profiles start in **Edit mode**. Draw or **Add Point** appends vertices
+- Choose NONE or REVOLVED_PROFILE. New cavities start with two axis endpoints in **Draw mode**;
+  populated profiles start in **Edit mode**. Draw or **Add Point** adds vertices before the final axis endpoint
   on empty canvas clicks, with a snapped live preview. Existing point clicks select
   without adding duplicates. Edit mode selects/drags points and never appends them.
-- The point table contains **# | Z (mm) | Y (mm) | R (mm) | Chamfer (mm) | Angle (°)**.
+- The point table contains **# | Z (mm) | Y (mm) | R_fillet (mm) | L_chamfer (mm) | θ_chamfer (°)**.
   Rows show original theoretical coordinates; each row retains a hidden vertex UUID.
   Table/sketch selection stays synchronized. Numeric edits update immediately,
   retain floating-point precision, use decimal periods and bypass grid snapping.
 - Z is horizontal depth, Y is nonnegative vertical radial distance, and **R means
   fillet radius only**. Y=0 is the fixed revolve axis; Z=0 is the mounting face and
   positive Z is depth into the manifold. Snap offers OFF, 0.1, 0.5 and 1 mm.
-- At an internal vertex, enter R > 0 to activate FILLET, or Chamfer > 0 to activate
+- At any vertex, including endpoints, enter R_fillet > 0 to activate FILLET, or Chamfer > 0 to activate
   CHAMFER; these features replace each other. Chamfer Angle starts at 45° and is
   directly editable. Zero the active dimension to return to SHARP; angle is inactive
   without a chamfer. No separate Apply button is needed.
@@ -153,13 +153,13 @@ all instances share one profile and the same schematic port identities.
   uses derived arcs/trimmed segments, with automatic radius/chamfer leaders. Selecting
   or hovering a treated point shows subtle dashed theoretical edge extensions.
   Dragging it recomputes geometry while preserving its feature parameters and ID.
-- **Insert After Selected** arms the next canvas click; **Delete Point** removes
+- **Insert After Selected** arms the next canvas click; **Delete Selected Point** removes
   the selected vertex. Unaffected IDs and treatments survive append/insert/delete.
   Impossible treatment changes are rejected and the previous value is restored.
   Other draft errors show explicit INVALID feedback and block Save.
-- **Place Interface** adds a distinct marker mapped to an existing schematic port
-  ID. Set AXIAL/RADIAL, Z/Y, nominal diameter and preferred direction. Duplicate or
-  nonexistent port mappings are rejected; missing required mappings produce warnings.
+- **Add Port — pick cavity surface** creates a generalized surface anchor mapped to
+  an existing schematic port ID. Edit its 3D direction and cross section. Duplicate
+  or nonexistent mappings are rejected; missing required mappings produce warnings.
 - Markers are independently selectable; double-click one or choose **Edit Selected
   Interface** to edit it. Placement finishes cleanly and preserves Draw/Edit mode.
   The marker section can collapse to leave more room for the point table.
@@ -183,21 +183,26 @@ meaning, datum and validation limits.
 
 ## Four-view surface and hydraulic port editor
 
-The cavity editor contains resizable **YZ**, **XZ**, **XY** and **ISO** panes.
+The cavity editor contains resizable panes: **YZ / XY** above **XZ / ISO**.
+The window supports maximize/restore. Independently collapse **Theoretical
+Vertices** and **Hydraulic Interfaces** with their chevrons; port geometry stays visible.
 YZ retains the authoritative Z-horizontal/Y-radial profile editor. XZ shows Z
 horizontally and X vertically; XY shows X horizontally and Y vertically. ISO
-is an orthographic 3D camera. The evaluated profile revolves around Z with open
-end rings; the surface is never automatically capped or turned into a solid.
+is an orthographic 3D camera. The evaluated profile revolves around Z with axis-closed
+ends for valid new profiles. The virtual axis closure is never revolved into a wall
+or used to generate a CAD solid.
 
 1. Draw/edit the profile in YZ or its table, then inspect the surface in ISO.
 2. Choose **Add Port — pick cavity surface**, then click a surface in ISO, XZ or XY.
    Picking records the persistent segment/feature, its along-feature parameter
    and circumferential angle. It initializes direction from the local wall normal.
 3. Assign an existing schematic port ID. Edit **dx/dy/dz**, cross section and
-   section rotation; the direction is normalized. Circle uses diameter, slot uses
+   section rotation; inward vectors reverse automatically; zero or near-tangential vectors are rejected.
+   This checks only the local outward start. Circle uses diameter, slot uses
    width and overall capsule length, rectangle uses width/height. Sizes must be
    positive; slot length must be at least its width.
-4. Set **Preview length** to visualize the finite channel. It is visualization-only,
+4. Set **Total extent** to visualize the finite channel (new ports default to
+   ±1.000 mm around the anchor, 2.000 mm total). It is visualization-only,
    never a drilling depth or routing constraint. Channels may overlap the cavity;
    there is no intersection calculation, trimming or Boolean subtraction.
 5. Click a port's marker or channel in a projection, or its table row, to highlight
@@ -214,23 +219,37 @@ Removing/replacing an anchored corner or inserting between an anchored vertex pa
 marks the port **INVALID anchor**. It is hidden from geometric previews and remains
 in the table/JSON for explicit reattachment; it is never moved to another feature.
 
-Older AXIAL/RADIAL interfaces remain at their original fixed positions, with
-compatible default channel directions and circular sections. **Place Interface
-Marker** retains the original YZ placement workflow. Its marker dialog now also
-supports arbitrary direction and section editing. The legacy radial `r_mm` field
-still displays as Y in that workflow; anchored ports use their resolved XYZ in
-projections. See [surface/port format](docs/cavity-surface.md).
+Hydraulic-dialog numbers display exactly three decimal places with periods; unedited
+stored values retain their precision. Legacy AXIAL/RADIAL records and explicit preview
+lengths load unchanged, with their original forward preview extent. Editing a legacy
+port migrates it only when its exact original XYZ lies on an evaluated surface and its
+azimuth is known. Other legacy ports retain their fixed positions until explicitly
+reattached. The obsolete type/direction/Store Y controls are removed.
 
-For immediate evaluation, open [the V1.4 surface demo](examples/parallel_check_valves_3d.amcad.json)
-and edit CV1's definition cavity. CV1/CV2 share one illustrative profile with a
-circle IN channel and inclined slot OUT channel. Dimensions are not a commercial
-valve cavity standard. The [graph](examples/parallel_check_valves_3d.graph.json)
-contains the same definition/port data and schematic topology.
+REVOLVED_PROFILE endpoints must have Y=0; their table Y cells and dragging are locked,
+while Z remains editable. New profiles start at Z=0 and Z=10 with two axis points;
+add internal points before saving. A finished cavity needs at least three vertices,
+nonzero enclosed area and a valid evaluated boundary. Endpoint treatments use a
+virtual axis closure while keeping original theoretical vertices unchanged. Axis
+endpoints cannot be deleted; edit their Z or delete an internal point instead.
+
+Older off-axis profiles load without geometry changes and show INVALID in the editor.
+**Explicitly set endpoint Y = 0** performs a visible, deliberate correction. Inspect
+its result and affected port anchors before Save. Schematic loading/export remains
+compatible, including these legacy profiles; strict cavity validation applies when
+saving cavity edits. See [surface/port format](docs/cavity-surface.md).
+
+For manual evaluation, open [the V1.4a example](examples/parallel_check_valves_v14a.amcad.json),
+select CV1, and choose **Component → Edit Definition Cavity…**. Resize/maximize, collapse
+each panel, edit Z and corner dimensions, then add a port on a picked surface. Try an
+inward and a tangential direction, verify centered previews, and save/reopen. CV1/CV2
+share one definition. The original V1.3/V1.4 examples remain available for compatibility
+checks and require explicit endpoint correction before saving cavity edits.
 
 ```bash
-python -m app.main examples/parallel_check_valves_3d.amcad.json
-QT_QPA_PLATFORM=offscreen python -m app.main examples/parallel_check_valves_3d.amcad.json --smoke
-python -m examples.create_surface_demo
+python -m app.main examples/parallel_check_valves_v14a.amcad.json
+QT_QPA_PLATFORM=offscreen python -m app.main examples/parallel_check_valves_v14a.amcad.json --smoke
+python -m examples.create_refined_surface_demo
 ```
 
 These are software-rendered visualization meshes with finite tessellation and

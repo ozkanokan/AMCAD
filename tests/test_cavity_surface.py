@@ -18,7 +18,7 @@ def cylinder(): return CavityProfile([ProfileVertex(0,3),ProfileVertex(10,3)])
 def anchored(profile,kind='CIRCLE',t=.5,angle=0):
     a,b=profile.vertices[:2]
     return HydraulicInterface('IN','SURFACE',surface_anchor=SurfaceAnchor('LINE',a.id,b.id,t,angle),
-                              direction=(1,2,3),section=ChannelSection(kind),section_rotation_deg=30,preview_length_mm=7)
+                              direction=(1,2,3),section=ChannelSection(kind),section_rotation_deg=30,preview_length_mm=7,preview_mode="FORWARD")
 
 
 def test_revolved_surface_coordinates_open_endpoints_and_fillets():

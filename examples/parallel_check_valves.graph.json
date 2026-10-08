@@ -232,7 +232,8 @@
             "direction": null,
             "section": null,
             "section_rotation_deg": 0,
-            "preview_length_mm": 10
+            "preview_length_mm": 10,
+            "preview_mode": "FORWARD"
           },
           {
             "hydraulic_port_id": "OUT",
@@ -246,7 +247,8 @@
             "direction": null,
             "section": null,
             "section_rotation_deg": 0,
-            "preview_length_mm": 10
+            "preview_length_mm": 10,
+            "preview_mode": "FORWARD"
           }
         ]
       }

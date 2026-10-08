@@ -4,11 +4,11 @@ from PySide6.QtCore import Qt, QLocale, QTimer
 from PySide6.QtGui import QDoubleValidator, QColor, QPalette
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QWidget,
     QLabel, QPushButton, QComboBox, QDoubleSpinBox, QDialogButtonBox, QTableWidget,
-    QTableWidgetItem, QHeaderView, QCheckBox, QStyledItemDelegate, QLineEdit, QGroupBox, QSplitter)
-from core.cavity import CavityProfile, Corner, PhysicalDefinition, HydraulicInterface
+    QTableWidgetItem, QHeaderView, QCheckBox, QStyledItemDelegate, QLineEdit, QGroupBox, QSplitter, QToolButton, QSizePolicy)
+from core.cavity import CavityProfile, ProfileVertex, Corner, PhysicalDefinition, HydraulicInterface
 from ui.cavity_sketch_view import CavitySketchView
 from core.cavity_surface import (SurfaceAnchor, ChannelSection, normalized, surface_patches,
-    resolve_anchor, interface_pose, revolved_surface, anchor_key)
+    resolve_anchor, interface_pose, revolved_surface, anchor_key, outward_direction, legacy_surface_anchor)
 from ui.cavity_surface_view import CavitySurfaceView
 
 
@@ -40,185 +40,158 @@ class PointNumberDelegate(QStyledItemDelegate):
         return editor
 
 
-class InterfaceDialog(QDialog):
-    def __init__(self, ports, interfaces, marker=None, z=0, r=0, parent=None, profile=None, anchor=None):
+class CollapsiblePanel(QWidget):
+    def __init__(self,title,parent=None):
         super().__init__(parent)
-        self.setLocale(QLocale.c())
-        self.setWindowTitle('Hydraulic Interface Marker')
-        self.marker = deepcopy(marker)
-        self.profile = profile
-        self.anchor = deepcopy(anchor if anchor is not None else marker.surface_anchor if marker else None)
-        self.result_marker = None
-        form = QFormLayout(self)
-        self.port = QComboBox()
-        occupied = {i.hydraulic_port_id for i in interfaces if marker is None or i.id != marker.id}
+        layout=QVBoxLayout(self); layout.setContentsMargins(0,0,0,0)
+        self.header=QToolButton(); self.header.setText(title); self.header.setCheckable(True)
+        self.header.setChecked(True); self.header.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.header.setArrowType(Qt.DownArrow)
+        self.contents=QWidget(); self.content_layout=QVBoxLayout(self.contents)
+        self.content_layout.setContentsMargins(0,0,0,0)
+        layout.addWidget(self.header); layout.addWidget(self.contents,1)
+        self.header.toggled.connect(self.set_expanded)
+
+    def set_expanded(self,expanded):
+        self.header.setArrowType(Qt.DownArrow if expanded else Qt.RightArrow)
+        self.contents.setVisible(expanded)
+        self.setSizePolicy(QSizePolicy.Preferred,QSizePolicy.Expanding if expanded else QSizePolicy.Maximum)
+
+
+def interface_number(value=0,minimum=-1e6,maximum=1e6,step=.1):
+    widget=number(minimum,maximum); widget.setDecimals(3); widget.setSingleStep(step); widget.setValue(value)
+    return widget
+
+
+def feature_label(index,patch):
+    start,_=patch.evaluate(0); end,_=patch.evaluate(1)
+    radius=f" | R_fillet {patch.feature['radius']:.3f} mm" if patch.anchor.kind=='FILLET' else ''
+    return f"{index+1} — {patch.anchor.kind} | Z {start[0]:.3f} → {end[0]:.3f} mm | Y {start[1]:.3f} → {end[1]:.3f} mm"+radius
+
+
+class InterfaceDialog(QDialog):
+    def __init__(self,ports,interfaces,marker=None,z=0,r=0,parent=None,profile=None,anchor=None):
+        super().__init__(parent); self.setLocale(QLocale.c()); self.setWindowTitle('Hydraulic Interface')
+        self.ports=ports; self.marker=deepcopy(marker); self.profile=profile; self.result_marker=None
+        self.anchor=deepcopy(anchor or (marker.surface_anchor if marker else None))
+        if self.anchor is None and marker and profile:
+            self.anchor=legacy_surface_anchor(profile,marker)
+        root=QVBoxLayout(self)
+        def group(title):
+            box=QGroupBox(title); form=QFormLayout(box); root.addWidget(box); return form
+        form=group('1. Schematic Port'); self.port=QComboBox()
+        occupied={i.hydraulic_port_id for i in interfaces if marker is None or i.id!=marker.id}
         self.port.addItems([p.id for p in ports if p.id not in occupied])
-        self.kind = QComboBox()
-        self.kind.addItems(['AXIAL', 'RADIAL', 'SURFACE'])
-        self.z = number()
-        self.r = number(0)  # Internal r remains the persisted radial-coordinate field.
-        self.diameter = number(.000001)
-        self.use_r = QCheckBox('Store Y position')
-        self.use_r.setChecked(True)
-        self.direction = QComboBox()
-        self.direction.addItems(['UNSPECIFIED', 'AXIAL_POSITIVE', 'AXIAL_NEGATIVE', 'RADIAL'])
-        self.z.setValue(z)
-        self.r.setValue(r)
-        self.diameter.setValue(4)
-        if marker:
-            self.port.setCurrentText(marker.hydraulic_port_id)
-            self.kind.setCurrentText(marker.interface_type)
-            self.z.setValue(marker.z_mm)
-            self.r.setValue(marker.r_mm or 0)
-            self.use_r.setChecked(marker.r_mm is not None)
-            self.diameter.setValue(marker.nominal_connection_diameter_mm)
-            self.direction.setCurrentText(marker.preferred_direction)
-        if anchor is not None:
-            xyz, normal = resolve_anchor(profile, anchor)
-            self.kind.setCurrentText('SURFACE')
-            self.z.setValue(xyz[2]); self.r.setValue(math.hypot(xyz[0], xyz[1]))
-        self.original_numbers = {name: getattr(self, name).value() for name in ('z', 'r', 'diameter')}
-        self.use_r.toggled.connect(self.r.setEnabled)
-        self.r.setEnabled(self.use_r.isChecked())
-        for label, widget in [('Schematic Port ID', self.port), ('Interface Type', self.kind),
-                              ('Z (mm)', self.z), ('Y (mm)', self.r), ('', self.use_r),
-                              ('Nominal Diameter (mm)', self.diameter), ('Preferred Direction', self.direction)]:
-            form.addRow(label, widget)
-        self.feature = QComboBox()
-        try: patches = surface_patches(profile) if profile is not None else []
-        except ValueError: patches = []
-        self.feature.addItem('Legacy fixed position', None)
-        for index, patch in enumerate(patches):
-            self.feature.addItem(f'{index+1}: {patch.anchor.kind} ({patch.anchor.vertex_id[:8]})', patch.anchor)
-        if self.anchor is not None:
-            match = next((i for i in range(1,self.feature.count()) if anchor_key(self.feature.itemData(i))==anchor_key(self.anchor)), None)
+        if marker: self.port.setCurrentText(marker.hydraulic_port_id)
+        form.addRow('Component port ID',self.port)
+        form=group('2. Surface Anchor'); self.feature=QComboBox()
+        self.feature.addItem('Unresolved legacy position — choose a surface explicitly',None)
+        try: patches=surface_patches(profile) if profile else []
+        except ValueError: patches=[]
+        for index,patch in enumerate(patches): self.feature.addItem(feature_label(index,patch),patch.anchor)
+        if self.anchor:
+            match=next((i for i in range(1,self.feature.count()) if anchor_key(self.feature.itemData(i))==anchor_key(self.anchor)),None)
             if match is None:
-                self.feature.addItem('INVALID original anchor (choose a new feature)', self.anchor)
-                match = self.feature.count()-1
+                self.feature.addItem('INVALID original anchor — choose a new surface explicitly',self.anchor); match=self.feature.count()-1
             self.feature.setCurrentIndex(match)
-        form.addRow('Surface feature', self.feature)
-        self.parameter = number(0,1); self.azimuth = number(-360000,360000)
-        self.parameter.setValue(self.anchor.t if self.anchor else .5)
-        self.azimuth.setValue(self.anchor.angle_deg if self.anchor else 0)
-        self.initial_anchor=deepcopy(self.anchor)
-        self.initial_anchor_controls=(self.parameter.value(),self.azimuth.value())
-        anchor_row = QHBoxLayout(); anchor_row.addWidget(QLabel('Along [0–1]')); anchor_row.addWidget(self.parameter)
-        anchor_row.addWidget(QLabel('Angle (°)')); anchor_row.addWidget(self.azimuth)
-        form.addRow('Surface anchor', anchor_row)
-        self.xyz_label = QLabel(); form.addRow('Resolved XYZ (mm)', self.xyz_label)
-        try: vector = interface_pose(profile, marker)[1] if marker else normal if anchor else (0,0,1)
-        except ValueError: vector = marker.direction or (0,0,1)
-        self.vector = [number(-1e6,1e6) for _ in range(3)]
-        vector_row = QHBoxLayout()
-        for name, widget, value in zip(('dx','dy','dz'),self.vector,vector):
-            widget.setValue(value); vector_row.addWidget(QLabel(name)); vector_row.addWidget(widget)
-        form.addRow('Channel direction', vector_row)
-        self.section_type = QComboBox(); self.section_type.addItems(['CIRCLE','SLOT','RECTANGLE'])
-        section = marker.section if marker and marker.section else ChannelSection(diameter_mm=self.diameter.value())
+        self.parameter=interface_number(self.anchor.t if self.anchor else .5,0,1,.01)
+        self.azimuth=interface_number(self.anchor.angle_deg if self.anchor else 0,-360000,360000,1)
+        self.initial_anchor=deepcopy(self.anchor); self.initial_anchor_controls=(self.parameter.value(),self.azimuth.value())
+        form.addRow('Surface feature',self.feature); row=QHBoxLayout()
+        row.addWidget(QLabel('Along [0–1]')); row.addWidget(self.parameter); row.addWidget(QLabel('Angle (°)')); row.addWidget(self.azimuth)
+        form.addRow(row); self.xyz_label=QLabel(); form.addRow('Resolved XYZ (mm)',self.xyz_label)
+        try: vector=interface_pose(profile,marker)[1] if marker else resolve_anchor(profile,self.anchor)[1] if self.anchor else (0,0,1)
+        except ValueError: vector=marker.direction or (0,0,1)
+        form=group('3. Channel Direction'); self.vector=[interface_number(v,step=.01) for v in vector]
+        row=QHBoxLayout()
+        for label,widget in zip(('dx','dy','dz'),self.vector): row.addWidget(QLabel(label)); row.addWidget(widget)
+        form.addRow(row); form.addRow(QLabel('Outward vectors normalize; inward vectors reverse; tangential vectors are rejected.'))
+        form=group('4. Cross Section'); self.section_type=QComboBox(); self.section_type.addItems(['CIRCLE','SLOT','RECTANGLE'])
+        section=marker.section if marker and marker.section else ChannelSection(diameter_mm=marker.nominal_connection_diameter_mm if marker else 4)
         self.section_type.setCurrentText(section.type)
-        self.width = number(.000001); self.length = number(.000001); self.height = number(.000001)
-        self.circle_diameter = number(.000001); self.circle_diameter.setValue(section.diameter_mm)
-        self.width.setValue(section.width_mm); self.length.setValue(section.length_mm); self.height.setValue(section.height_mm)
-        form.addRow('Cross section',self.section_type)
-        section_row = QHBoxLayout()
-        for name,widget in [('Diameter',self.circle_diameter),('Width',self.width),('Overall length',self.length),('Height',self.height)]:
-            section_row.addWidget(QLabel(name)); section_row.addWidget(widget)
-        form.addRow('Section sizes (mm)',section_row)
-        self.rotation = number(-360000,360000); self.preview_length = number(.000001)
-        self.rotation.setValue(marker.section_rotation_deg if marker else 0)
-        self.preview_length.setValue(marker.preview_length_mm if marker else 10)
-        form.addRow('Section rotation (°)',self.rotation)
-        form.addRow('Preview length (mm)',self.preview_length)
-        form.addRow(QLabel('Preview only — no drilling depth, trimming or Boolean intersection'))
-        self.original_extended = (tuple(w.value() for w in self.vector),self.section_type.currentText(),
-                                  self.width.value(),self.length.value(),self.height.value(),self.diameter.value(),self.circle_diameter.value())
+        self.circle_diameter=interface_number(section.diameter_mm,.001); self.width=interface_number(section.width_mm,.001)
+        self.length=interface_number(section.length_mm,.001); self.height=interface_number(section.height_mm,.001)
+        self.rotation=interface_number(marker.section_rotation_deg if marker else 0,-360000,360000,1)
+        form.addRow('Section',self.section_type); row=QHBoxLayout()
+        for label,widget in [('Diameter',self.circle_diameter),('Width',self.width),('Overall length',self.length),('Height',self.height)]:
+            row.addWidget(QLabel(label)); row.addWidget(widget)
+        form.addRow('Sizes (mm)',row); form.addRow('Section rotation (°)',self.rotation)
+        form=group('5. Preview')
+        self.preview_length=interface_number(marker.preview_length_mm if marker else 2,.001)
+        form.addRow('Total extent (mm)',self.preview_length)
+        form.addRow(QLabel('Centered ±half extent for new ports; legacy forward extents stay unchanged.'))
+        self.original_vector=tuple(w.value() for w in self.vector)
+        self.original_section=(self.section_type.currentText(),self.circle_diameter.value(),self.width.value(),self.length.value(),self.height.value())
         self.original_preview=(self.rotation.value(),self.preview_length.value())
-        if not self.anchor and not (marker and marker.section):
-            self.diameter.valueChanged.connect(self.circle_diameter.setValue)
-        self.feature.currentIndexChanged.connect(self.update_anchor)
-        self.parameter.valueChanged.connect(self.update_anchor); self.azimuth.valueChanged.connect(self.update_anchor)
+        self.feedback=QLabel(); self.feedback.setWordWrap(True); root.addWidget(self.feedback)
+        self.buttons=QDialogButtonBox(QDialogButtonBox.Ok|QDialogButtonBox.Cancel)
+        self.buttons.accepted.connect(self.submit); self.buttons.rejected.connect(self.reject); root.addWidget(self.buttons)
+        self.feature.currentIndexChanged.connect(self.update_anchor); self.parameter.valueChanged.connect(self.update_anchor); self.azimuth.valueChanged.connect(self.update_anchor)
         self.section_type.currentTextChanged.connect(self.section_changed)
         self.section_changed(); self.update_anchor()
-        self.feedback = QLabel()
-        form.addRow(self.feedback)
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttons.accepted.connect(self.submit)
-        buttons.rejected.connect(self.reject)
-        form.addRow(buttons)
-        self.ports = ports
 
     def section_changed(self):
-        kind=self.section_type.currentText()
-        self.circle_diameter.setEnabled(kind=='CIRCLE')
+        kind=self.section_type.currentText(); self.circle_diameter.setEnabled(kind=='CIRCLE')
         self.width.setEnabled(kind!='CIRCLE'); self.length.setEnabled(kind=='SLOT'); self.height.setEnabled(kind=='RECTANGLE')
 
     def update_anchor(self):
-        base=self.feature.currentData()
-        self.anchor=deepcopy(base)
+        base=self.feature.currentData(); self.anchor=deepcopy(base)
         if self.anchor:
             self.anchor.t=self.parameter.value(); self.anchor.angle_deg=self.azimuth.value()
             if self.initial_anchor and anchor_key(base)==anchor_key(self.initial_anchor):
                 if self.parameter.value()==self.initial_anchor_controls[0]: self.anchor.t=self.initial_anchor.t
                 if self.azimuth.value()==self.initial_anchor_controls[1]: self.anchor.angle_deg=self.initial_anchor.angle_deg
             try:
-                xyz,_=resolve_anchor(self.profile,self.anchor)
-                self.xyz_label.setText(' / '.join(f'{v:.8g}' for v in xyz))
+                xyz,_=resolve_anchor(self.profile,self.anchor); self.xyz_label.setText(' / '.join(f'{v:.3f}' for v in xyz))
             except ValueError as error: self.xyz_label.setText('INVALID: '+str(error))
-        else: self.xyz_label.setText('Legacy: X=0, Y and Z use fixed position fields')
+        elif self.marker:
+            xyz,_=interface_pose(self.profile,self.marker); self.xyz_label.setText(' / '.join(f'{v:.3f}' for v in xyz)+' — unanchored legacy record')
+        else: self.xyz_label.setText('Select a cavity surface feature')
         self.parameter.setEnabled(bool(base)); self.azimuth.setEnabled(bool(base))
-        self.z.setEnabled(not bool(base)); self.r.setEnabled(not bool(base) and self.use_r.isChecked())
+        owner=self.parent()
+        if owner and hasattr(owner,'view'): owner.view.highlight_feature(self.anchor)
+
+    def done(self,result):
+        owner=self.parent()
+        if owner and hasattr(owner,'view'): owner.view.highlight_feature(None)
+        super().done(result)
 
     def submit(self):
-        marker = HydraulicInterface(self.port.currentText(), self.kind.currentText(), self.z.value(),
-                                    self.r.value() if self.use_r.isChecked() else None,
-                                    self.diameter.value(), self.direction.currentText())
-        if self.marker:
-            marker.id = self.marker.id
-            # Opening and accepting a marker must not round existing stored data
-            # to the numeric widget's display precision.
-            for name, field in [('z', 'z_mm'), ('r', 'r_mm'), ('diameter', 'nominal_connection_diameter_mm')]:
-                if (name != 'r' or self.use_r.isChecked() == (self.marker.r_mm is not None)) and getattr(self, name).value() == self.original_numbers[name]:
-                    setattr(marker, field, getattr(self.marker, field))
-        marker.surface_anchor=deepcopy(self.anchor)
-        if self.anchor:
-            try:
-                xyz,_=resolve_anchor(self.profile,self.anchor)
-                marker.z_mm=xyz[2]; marker.r_mm=math.hypot(xyz[0],xyz[1])
-            except ValueError: pass  # Retain and flag unresolved anchors; explicit reattachment is available.
+        marker=deepcopy(self.marker) if self.marker else HydraulicInterface(self.port.currentText(),'SURFACE')
+        marker.hydraulic_port_id=self.port.currentText(); marker.surface_anchor=deepcopy(self.anchor)
         try:
-            vector=normalized(tuple(w.value() for w in self.vector))
-        except ValueError as error:
-            self.feedback.setText(str(error)); return
-        extended=(tuple(w.value() for w in self.vector),self.section_type.currentText(),
-                  self.width.value(),self.length.value(),self.height.value(),self.diameter.value(),self.circle_diameter.value())
-        vector_changed=extended[0]!=self.original_extended[0]
-        section_changed=extended[1:]!=self.original_extended[1:]
-        marker.direction=vector if self.anchor or vector_changed or self.marker and self.marker.direction is not None else None
-        marker.section=ChannelSection(self.section_type.currentText(),self.circle_diameter.value(),self.width.value(),self.length.value(),self.height.value()) if self.anchor or section_changed or self.marker and self.marker.section is not None else None
-        if self.marker and not vector_changed: marker.direction=deepcopy(self.marker.direction)
-        if self.marker and not section_changed: marker.section=deepcopy(self.marker.section)
-        marker.section_rotation_deg=self.rotation.value(); marker.preview_length_mm=self.preview_length.value()
-        if self.marker:
-            if self.rotation.value()==self.original_preview[0]: marker.section_rotation_deg=self.marker.section_rotation_deg
-            if self.preview_length.value()==self.original_preview[1]: marker.preview_length_mm=self.marker.preview_length_mm
-        try:
+            if not self.anchor and not self.marker: raise ValueError('New hydraulic interfaces require a surface anchor')
+            vector=tuple(w.value() for w in self.vector)
+            if self.marker and vector==self.original_vector: vector=interface_pose(self.profile,self.marker)[1]
+            if self.anchor:
+                vector=outward_direction(self.profile,self.anchor,vector)
+                marker.interface_type='SURFACE'
+                xyz,_=resolve_anchor(self.profile,self.anchor); marker.z_mm=xyz[2]; marker.r_mm=math.hypot(*xyz[:2])
+            else: vector=normalized(vector)
+            if self.marker and self.marker.direction and tuple(w.value() for w in self.vector)==self.original_vector:
+                original=self.marker.direction
+                if math.isclose(math.sqrt(sum(v*v for v in original)),1,abs_tol=1e-12) and sum(a*b for a,b in zip(original,vector))>0:
+                    vector=original
+            marker.direction=vector
+            values=(self.section_type.currentText(),self.circle_diameter.value(),self.width.value(),self.length.value(),self.height.value())
+            marker.section=deepcopy(self.marker.section) if self.marker and self.marker.section and values==self.original_section else ChannelSection(*values)
+            marker.section_rotation_deg=self.marker.section_rotation_deg if self.marker and self.rotation.value()==self.original_preview[0] else self.rotation.value()
+            marker.preview_length_mm=self.marker.preview_length_mm if self.marker and self.preview_length.value()==self.original_preview[1] else self.preview_length.value()
             marker.validate({p.id for p in self.ports})
-        except ValueError as error:
-            self.feedback.setText(str(error))
-            return
-        self.result_marker = marker
-        self.accept()
+        except ValueError as error: self.feedback.setText(str(error)); return
+        self.result_marker=marker; self.accept()
 
 
 class CavityEditor(QDialog):
     def __init__(self, ports, physical=None, parent=None):
         super().__init__(parent)
         self.setLocale(QLocale.c())
-        self.setWindowTitle('Cavity Profile — Four-view Surface Editor V1.4')
-        self.resize(1500, 900)
+        self.setWindowTitle('Cavity Profile — Four-view Surface Editor V1.4a')
+        self.setWindowFlags(self.windowFlags()|Qt.WindowMaximizeButtonHint|Qt.WindowMinimizeButtonHint)
+        self.resize(1500,900)
         self.ports = deepcopy(ports)
         self.physical = deepcopy(physical or PhysicalDefinition())
-        self.profile = self.physical.cavity_profile or CavityProfile()
+        self.profile = self.physical.cavity_profile or CavityProfile([ProfileVertex(0,0),ProfileVertex(10,0)])
         self.interfaces = self.physical.hydraulic_interfaces
         self.result_physical = None
         self.selected_id = None
@@ -236,10 +209,11 @@ class CavityEditor(QDialog):
         root.addLayout(heading)
         body = QHBoxLayout()
         self.view = CavitySketchView(self.profile, self.interfaces)
+        self.view.lock_endpoints=True
         self.surface_views = {label:CavitySurfaceView(label) for label in ('XZ','XY','ISO')}
         self.four_views = QSplitter(Qt.Vertical)
-        top=QSplitter(Qt.Horizontal); top.addWidget(self.view); top.addWidget(self.surface_views['XZ'])
-        bottom=QSplitter(Qt.Horizontal); bottom.addWidget(self.surface_views['XY']); bottom.addWidget(self.surface_views['ISO'])
+        top=QSplitter(Qt.Horizontal); top.addWidget(self.view); top.addWidget(self.surface_views['XY'])
+        bottom=QSplitter(Qt.Horizontal); bottom.addWidget(self.surface_views['XZ']); bottom.addWidget(self.surface_views['ISO'])
         self.four_views.addWidget(top); self.four_views.addWidget(bottom)
         self.four_views.setStretchFactor(0,1); self.four_views.setStretchFactor(1,1)
         self.four_views.setSizes([400,400]); top.setSizes([500,500]); bottom.setSizes([500,500])
@@ -253,23 +227,29 @@ class CavityEditor(QDialog):
         properties.setMinimumWidth(460)
         properties.setMaximumWidth(560)
         side = QVBoxLayout(properties)
-        side.addWidget(QLabel('Theoretical vertices — edit values directly; R is fillet radius'))
+        self.vertices_panel=CollapsiblePanel('Theoretical Vertices'); side.addWidget(self.vertices_panel,1)
         self.points = QTableWidget(0, 6)
         self.points.setObjectName('cavityPointTable')
         self.points.setLocale(QLocale.c())
-        self.points.setHorizontalHeaderLabels(['#', 'Z (mm)', 'Y (mm)', 'R (mm)', 'Chamfer (mm)', 'Angle (°)'])
+        self.points.setHorizontalHeaderLabels(['#','Z (mm)','Y (mm)','R_fillet (mm)','L_chamfer (mm)','θ_chamfer (°)'])
         self.points.verticalHeader().hide()
         self.points.setSelectionBehavior(QTableWidget.SelectRows)
         self.points.setSelectionMode(QTableWidget.SingleSelection)
         self.points.setItemDelegate(PointNumberDelegate(self.points))
         self.points.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.points.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        for column in (3,4,5):
+            self.points.horizontalHeader().setSectionResizeMode(column,QHeaderView.ResizeToContents)
         self.points.setSortingEnabled(False)
-        side.addWidget(self.points, 1)
-        self.interface_group = QGroupBox('Hydraulic Interface Markers')
-        self.interface_group.setCheckable(True)
-        self.interface_group.setChecked(True)
-        group_layout = QVBoxLayout(self.interface_group)
+        self.vertices_panel.content_layout.addWidget(self.points,1)
+        actions=QHBoxLayout(); self.add_button=QPushButton('Add Point'); self.add_button.clicked.connect(lambda:self.set_mode(True)); actions.addWidget(self.add_button)
+        for label,callback in [('Insert After Selected',self.insert_point),('Delete Selected Point',self.delete_point)]:
+            button=QPushButton(label); button.clicked.connect(callback); actions.addWidget(button)
+        self.vertices_panel.content_layout.addLayout(actions)
+        self.correct_button=QPushButton('Explicitly set endpoint Y = 0'); self.correct_button.clicked.connect(self.correct_endpoints)
+        self.vertices_panel.content_layout.addWidget(self.correct_button)
+        self.interface_group=CollapsiblePanel('Hydraulic Interfaces')
+        group_layout=self.interface_group.content_layout
         self.interface_contents = QWidget()
         marker_layout = QVBoxLayout(self.interface_contents)
         marker_layout.setContentsMargins(0, 0, 0, 0)
@@ -281,9 +261,6 @@ class CavityEditor(QDialog):
         self.markers.setSelectionMode(QTableWidget.SingleSelection)
         self.markers.setEditTriggers(QTableWidget.NoEditTriggers)
         marker_layout.addWidget(self.markers)
-        add_marker = QPushButton('Place Interface Marker')
-        add_marker.clicked.connect(self.begin_marker)
-        marker_layout.addWidget(add_marker)
         self.add_port = QPushButton('Add Port — pick cavity surface')
         self.add_port.clicked.connect(self.begin_surface_port); marker_layout.addWidget(self.add_port)
         marker_buttons = QHBoxLayout()
@@ -293,8 +270,7 @@ class CavityEditor(QDialog):
             marker_buttons.addWidget(button)
         marker_layout.addLayout(marker_buttons)
         group_layout.addWidget(self.interface_contents)
-        self.interface_group.toggled.connect(self.interface_contents.setVisible)
-        side.addWidget(self.interface_group)
+        side.addWidget(self.interface_group,1)
         content=QSplitter(Qt.Horizontal); body.removeWidget(self.four_views)
         content.addWidget(self.four_views); content.addWidget(properties); content.setStretchFactor(0,1)
         content.setSizes([1000,480]); body.addWidget(content)
@@ -302,17 +278,11 @@ class CavityEditor(QDialog):
         toolbar = QHBoxLayout()
         self.mode = QComboBox()
         self.mode.addItems(['Draw mode', 'Edit mode'])
-        self.mode.setCurrentIndex(0 if not self.profile.vertices else 1)
+        self.mode.setCurrentIndex(0 if self.physical.cavity_profile is None else 1)
         self.mode.currentIndexChanged.connect(self.mode_changed)
         toolbar.addWidget(QLabel('Mode'))
         toolbar.addWidget(self.mode)
-        self.add_button = QPushButton('Add Point')
-        self.add_button.clicked.connect(lambda: self.set_mode(True))
-        toolbar.addWidget(self.add_button)
-        for label, callback in [('Insert After Selected', self.insert_point), ('Delete Point', self.delete_point), ('Fit', self.fit_views)]:
-            button = QPushButton(label)
-            button.clicked.connect(callback)
-            toolbar.addWidget(button)
+        fit=QPushButton('Fit'); fit.clicked.connect(self.fit_views); toolbar.addWidget(fit)
         self.preview = QPushButton('Revolve Preview')
         self.preview.setCheckable(True)
         self.preview.toggled.connect(self.set_preview)
@@ -332,6 +302,7 @@ class CavityEditor(QDialog):
         root.addWidget(self.warnings)
         root.addWidget(self.feedback)
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+        self.save_button=buttons.button(QDialogButtonBox.Save)
         buttons.accepted.connect(self.submit)
         buttons.rejected.connect(self.reject)
         root.addWidget(buttons)
@@ -362,7 +333,7 @@ class CavityEditor(QDialog):
 
     def refresh_surface_views(self):
         try:
-            surface = revolved_surface(self.profile) if not self.profile.validation_errors() else None
+            surface = revolved_surface(self.profile) if not self.profile.validation_errors(revolved=True) else None
         except ValueError: surface = None
         for preview in self.surface_views.values():
             preview.set_geometry(self.profile,surface,self.interfaces,self.selected_port_id)
@@ -370,7 +341,7 @@ class CavityEditor(QDialog):
     def begin_surface_port(self):
         if len(self.interfaces)>=len(self.ports):
             self.feedback.setText('All schematic ports already have an interface'); return
-        if self.profile.validation_errors():
+        if self.profile.validation_errors(revolved=True):
             self.feedback.setText('Create a valid cavity profile before picking a surface'); return
         self.view.marker_mode=False; self.surface_place_mode=True
         for preview in self.surface_views.values(): preview.place_mode=True; preview.setCursor(Qt.CrossCursor); preview.update()
@@ -436,6 +407,7 @@ class CavityEditor(QDialog):
 
     def type_changed(self):
         enabled = self.cavity_type.currentText() != 'NONE'
+        self.view.lock_endpoints=enabled
         self.view.setEnabled(enabled)
         self.points.setEnabled(enabled)
         self.interface_group.setEnabled(enabled)
@@ -459,7 +431,7 @@ class CavityEditor(QDialog):
                 item.setText(value)
                 item.setData(Qt.UserRole, vertex.id)
                 flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
-                if col and (col != 5 or corner.type == 'CHAMFER'):
+                if col and not (col==2 and row in (0,len(self.profile.vertices)-1) and self.cavity_type.currentText()=='REVOLVED_PROFILE') and (col != 5 or corner.type == 'CHAMFER'):
                     flags |= Qt.ItemIsEditable
                 item.setFlags(flags)
                 item.setForeground(self.points.palette().color(QPalette.Disabled,QPalette.Text) if col == 5 and corner.type != 'CHAMFER' else self.points.palette().color(QPalette.Text))
@@ -501,6 +473,8 @@ class CavityEditor(QDialog):
             value = float(item.text())  # Deliberately accepts periods, never locale commas.
             if not math.isfinite(value):
                 raise ValueError('Value must be finite')
+            if col==2 and vertex_id in (self.profile.vertices[0].id,self.profile.vertices[-1].id):
+                raise ValueError('Endpoint Y is locked; explicitly correct legacy endpoints to zero')
             if col in (1, 2):
                 self.profile.edit_point(vertex_id, value if col == 1 else vertex.z,
                                         value if col == 2 else vertex.r)
@@ -527,8 +501,10 @@ class CavityEditor(QDialog):
         self.profile_changed()
 
     def profile_changed(self):
-        errors = [] if self.cavity_type.currentText() == 'NONE' else self.profile.validation_errors()
+        errors = [] if self.cavity_type.currentText() == 'NONE' else self.profile.validation_errors(revolved=True)
         self.validity.setText('INVALID: ' + errors[0] if errors else 'VALID')
+        self.save_button.setEnabled(not errors)
+        self.correct_button.setVisible(self.cavity_type.currentText()=='REVOLVED_PROFILE' and any(v.r!=0 for v in self.profile.vertices[::max(1,len(self.profile.vertices)-1)]))
         self.validity.setStyleSheet('color: #b3261e' if errors else 'color: #267343')
         physical = PhysicalDefinition(self.cavity_type.currentText(), self.profile, self.interfaces)
         self.warnings.setText('; '.join(physical.warnings(self.ports)))
@@ -541,6 +517,8 @@ class CavityEditor(QDialog):
             self.feedback.setText('Select the point preceding the insertion')
             return
         selected = self.selected_id
+        if selected==self.profile.vertices[-1].id:
+            self.feedback.setText('Insert before the last axis endpoint by selecting the preceding vertex'); return
         self.set_mode(True)
         self.view.insert_after = selected
         self.feedback.setText('Click the canvas to insert after the selected point')
@@ -548,6 +526,8 @@ class CavityEditor(QDialog):
     def delete_point(self):
         if not self.selected_id:
             return
+        if self.selected_id in (self.profile.vertices[0].id,self.profile.vertices[-1].id):
+            self.feedback.setText('Axis endpoints cannot be deleted; edit Z or delete an intermediate point'); return
         try:
             self.profile.delete_point(self.selected_id)
         except ValueError as error:
@@ -557,6 +537,14 @@ class CavityEditor(QDialog):
         self.selected_id = None
         self.view.rebuild()
         self.profile_changed()
+
+    def correct_endpoints(self):
+        candidate=deepcopy(self.profile)
+        candidate.vertices[0].r=candidate.vertices[-1].r=0
+        try: candidate.features()
+        except ValueError as error: self.feedback.setText('Endpoint correction rejected: '+str(error)); return
+        self.profile.vertices[0].r=self.profile.vertices[-1].r=0
+        self.view.rebuild(self.selected_id); self.profile_changed()
 
     def set_preview(self, enabled):
         self.view.mirrored = enabled
@@ -609,7 +597,19 @@ class CavityEditor(QDialog):
         self.feedback.setText('Click the sketch to place a hydraulic interface marker; Escape cancels')
 
     def place_marker(self, z, r):
-        dialog = InterfaceDialog(self.ports, self.interfaces, z=z, r=r, parent=self,profile=self.profile)
+        anchor=legacy_surface_anchor(self.profile,HydraulicInterface('','RADIAL',z,r))
+        if anchor is None:
+            for patch in surface_patches(self.profile):
+                for t in (0,1):
+                    if math.dist(patch.evaluate(t)[0],(z,r))<1e-7:
+                        anchor=deepcopy(patch.anchor); anchor.t=t; anchor.angle_deg=90; break
+                if anchor: break
+        self.view.marker_mode=False
+        self.view.update_cursor()
+        if anchor is None:
+            self.feedback.setText('Select a point on the evaluated cavity surface')
+            return
+        dialog = InterfaceDialog(self.ports, self.interfaces, parent=self,profile=self.profile,anchor=anchor)
         if dialog.exec() == QDialog.Accepted:
             self.interfaces.append(dialog.result_marker)
             self.refresh_markers(dialog.result_marker.id)
@@ -641,7 +641,7 @@ class CavityEditor(QDialog):
     def submit(self):
         physical = PhysicalDefinition() if self.cavity_type.currentText() == 'NONE' else PhysicalDefinition('REVOLVED_PROFILE', self.profile, self.interfaces)
         try:
-            physical.validate(self.ports)
+            physical.validate(self.ports,strict=True)
         except ValueError as error:
             self.feedback.setText(str(error))
             return

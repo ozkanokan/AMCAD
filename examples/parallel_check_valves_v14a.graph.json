@@ -145,7 +145,7 @@
           "vertices": [
             {
               "z": 0,
-              "r": 7,
+              "r": 0,
               "id": "e776bff6-689f-4674-a477-5565627ff131",
               "corner": {
                 "type": "SHARP",
@@ -200,7 +200,7 @@
             },
             {
               "z": 28,
-              "r": 3,
+              "r": 0,
               "id": "07a56ba2-54b6-456b-812a-eb51f044f68f",
               "corner": {
                 "type": "SHARP",
@@ -224,7 +224,7 @@
             "hydraulic_port_id": "IN",
             "interface_type": "SURFACE",
             "z_mm": 26.4,
-            "r_mm": 3.0,
+            "r_mm": 0.5999999999999996,
             "nominal_connection_diameter_mm": 4,
             "preferred_direction": "AXIAL_POSITIVE",
             "id": "e6031f31-fa2c-4100-834b-3c77b9a88205",
@@ -236,9 +236,9 @@
               "angle_deg": 0
             },
             "direction": [
-              0,
-              0,
-              1
+              0.0,
+              0.0,
+              1.0
             ],
             "section": {
               "type": "CIRCLE",
@@ -248,8 +248,8 @@
               "height_mm": 4
             },
             "section_rotation_deg": 0,
-            "preview_length_mm": 12,
-            "preview_mode": "FORWARD"
+            "preview_length_mm": 2,
+            "preview_mode": "CENTERED"
           },
           {
             "hydraulic_port_id": "OUT",
@@ -279,8 +279,8 @@
               "height_mm": 4
             },
             "section_rotation_deg": 20,
-            "preview_length_mm": 10,
-            "preview_mode": "FORWARD"
+            "preview_length_mm": 2,
+            "preview_mode": "CENTERED"
           }
         ]
       }
@@ -288,7 +288,7 @@
   ],
   "project": {
     "id": "c892e6b1-c0d8-4745-b113-31c87675aeee",
-    "name": "Illustrative parallel Check Valve \u2014 surface/channel demonstrator"
+    "name": "Illustrative parallel Check Valve \u2014 V1.4a closed cavity"
   },
   "component_instances": [
     {

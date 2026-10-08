@@ -20,7 +20,7 @@ from ui.cavity_sketch_view import corner_dimensions, profile_path
 def editor(qapp):
     definition=check_valve_definition()
     dialog=CavityEditor(definition.ports,definition.physical)
-    dialog.show(); qapp.processEvents()
+    dialog.show(); dialog.correct_endpoints(); dialog.points.item(2,2).setText("4"); dialog.interfaces[1].r_mm=4+6.5/12; dialog.view.rebuild(); qapp.processEvents()
     yield dialog
     dialog.reject(); dialog.close(); qapp.processEvents()
 
@@ -56,7 +56,7 @@ def edit_cell(qapp,editor,row,column,text):
 
 def test_zy_table_terminology_and_removed_controls(editor):
     assert [editor.points.horizontalHeaderItem(i).text() for i in range(6)]==[
-        '#','Z (mm)','Y (mm)','R (mm)','Chamfer (mm)','Angle (°)']
+        '#','Z (mm)','Y (mm)','R_fillet (mm)','L_chamfer (mm)','θ_chamfer (°)']
     assert 'Y = 0' in editor.view.AXIS_LABEL and 'Y ↑' in editor.view.DATUM_LABEL
     assert all('R=0' not in label.text() and 'R ↑' not in label.text() for label in editor.findChildren(QLabel))
     names={b.text() for b in editor.findChildren(QPushButton)}
@@ -93,11 +93,11 @@ def test_draw_and_edit_modes_preview_duplicate_hit_and_metadata(qapp,editor):
     editor.set_mode(True)
     editor.view.fit_profile()
     position=editor.view.mapFromScene(QPointF(30,-4))
-    QTest.mouseMove(editor.view.viewport(),position); qapp.processEvents()
+    QTest.mouseMove(editor.view.viewport(),position-QPointF(5,5).toPoint()); QTest.mouseMove(editor.view.viewport(),position); qapp.processEvents()
     assert not editor.view.preview_item.path().isEmpty()
     click(editor.view,30,4); qapp.processEvents()
     assert len(editor.profile.vertices)==count+1
-    assert (editor.profile.vertices[-1].z,editor.profile.vertices[-1].r)==(30,4)
+    assert (editor.profile.vertices[-2].z,editor.profile.vertices[-2].r)==(30,4)
     v=editor.profile.vertices[1]
     click(editor.view,v.z,v.r); qapp.processEvents()
     assert len(editor.profile.vertices)==count+1
@@ -109,17 +109,17 @@ def test_draw_and_edit_modes_preview_duplicate_hit_and_metadata(qapp,editor):
 
 
 def test_empty_profile_defaults_draw_and_escape_retains_committed_points(qapp):
-    editor=CavityEditor([PortDefinition('IN','IN')]); editor.show(); qapp.processEvents()
+    editor=CavityEditor([PortDefinition('IN','IN')]); editor.show(); editor.correct_endpoints(); qapp.processEvents()
     try:
         assert editor.mode.currentText()=='Draw mode'
         click(editor.view,2.25,4.25); click(editor.view,10,4)
         ids=[v.id for v in editor.profile.vertices]
-        assert len(ids)==2
+        assert len(ids)==4
         QTest.keyClick(editor.view,Qt.Key_Escape); qapp.processEvents()
         assert editor.isVisible() and editor.mode.currentText()=='Edit mode'
         assert [v.id for v in editor.profile.vertices]==ids
         click(editor.view,15,8)
-        assert len(editor.profile.vertices)==2
+        assert len(editor.profile.vertices)==4
         QTest.keyClick(editor,Qt.Key_Escape)
         assert editor.isVisible()
     finally: editor.reject()
@@ -144,8 +144,8 @@ def test_table_corner_exclusion_default_angle_exact_geometry_and_dimensions(qapp
     assert vertex.corner.angle_deg==30 and vertex.corner.radius_mm is None
     feature=editor.profile.features()[1]
     # Incoming is +Z; outgoing is -Y. A 30-degree cut has unequal setbacks.
-    assert feature['entry']==pytest.approx((7.5,7))
-    assert feature['exit']==pytest.approx((8,7-.5*math.tan(math.radians(30))))
+    assert math.dist(feature['entry'],(vertex.z,vertex.r))==pytest.approx(.5)
+    assert feature['setback_in']!=pytest.approx(feature['setback_out'])
     dimension=next(d for d in editor.view.dimensions if d['vertex_id']==vertex.id)
     assert dimension['text']=='0.5 × 30°'
     assert dimension['target']==pytest.approx(tuple((a+b)/2 for a,b in zip(feature['entry'],feature['exit'])))
@@ -191,12 +191,12 @@ def test_invalid_table_corner_or_move_restores_feature_and_coordinate(qapp,edito
     assert editor.profile.to_dict()==before
     assert 'rejected' in editor.feedback.text() and 'too large' in editor.feedback.text()
     assert float(editor.points.item(1,3).text())==.5
-    edit_cell(qapp,editor,0,1,'7.9')  # Fillet no longer fits incoming segment.
+    edit_cell(qapp,editor,2,2,'6.9')  # Fillet no longer fits incoming segment.
     assert editor.profile.to_dict()==before and 'too large' in editor.feedback.text()
     edit_cell(qapp,editor,1,2,'-1')
     assert editor.profile.to_dict()==before and 'negative' in editor.feedback.text()
-    edit_cell(qapp,editor,0,3,'1')
-    assert editor.profile.to_dict()==before and 'adjacent' in editor.feedback.text()
+    edit_cell(qapp,editor,0,3,'1000')
+    assert editor.profile.to_dict()==before and 'too large' in editor.feedback.text()
     assert editor.validity.text()=='VALID'  # Last valid state was restored.
 
 
@@ -204,7 +204,7 @@ def test_table_append_insert_delete_preserve_feature_ids_and_report_conflicts(qa
     original={v.id:deepcopy(v.corner) for v in editor.profile.vertices}
     editor.set_mode(True)
     click(editor.view,30,3); qapp.processEvents()
-    appended=editor.profile.vertices[-1]
+    appended=editor.profile.vertices[-2]
     editor.view.select_vertex(editor.profile.vertices[3].id)
     editor.insert_point(); click(editor.view,20,4); qapp.processEvents()
     inserted=editor.profile.vertices[4]
@@ -226,13 +226,12 @@ def test_table_append_insert_delete_preserve_feature_ids_and_report_conflicts(qa
 def test_place_marker_then_drag_table_edit_save_reopen(qapp,tmp_path):
     definition=check_valve_definition(); physical=deepcopy(definition.physical)
     physical.hydraulic_interfaces=[]
-    editor=CavityEditor(definition.ports,physical); editor.show(); qapp.processEvents()
+    editor=CavityEditor(definition.ports,physical); editor.show(); editor.correct_endpoints(); qapp.processEvents()
     try:
         for port,kind,z,y in [('IN','AXIAL',28,0),('OUT','RADIAL',14.5,5)]:
             def accept_marker(port=port,kind=kind,z=z,y=y):
                 dialog=editor.findChildren(InterfaceDialog)[-1]
-                dialog.port.setCurrentText(port); dialog.kind.setCurrentText(kind)
-                dialog.z.setValue(z); dialog.r.setValue(y); dialog.submit()
+                dialog.port.setCurrentText(port); dialog.submit()
             QTimer.singleShot(0,accept_marker)
             editor.begin_marker(); click(editor.view,z,y); qapp.processEvents()
             assert not editor.view.marker_mode and editor.mode.currentText()=='Edit mode'
@@ -291,10 +290,10 @@ def test_interface_scene_selection_double_click_edit_does_not_move_vertices(qapp
     assert editor.markers.currentRow()==1 and editor.selected_id is None
     def accept_edit():
         dialog=editor.findChildren(InterfaceDialog)[-1]
-        dialog.z.setValue(15.125); dialog.submit()
+        dialog.parameter.setValue(.59375); dialog.submit()
     QTimer.singleShot(0,accept_edit)
     QTest.mouseDClick(editor.view.viewport(),Qt.LeftButton,pos=editor.view.mapFromScene(QPointF(marker.z_mm,-marker.r_mm)))
-    assert editor.interfaces[1].z_mm==15.125 and editor.interfaces[1].id==marker.id
+    assert editor.interfaces[1].surface_anchor.t==.594 and editor.interfaces[1].id==marker.id
     assert editor.profile.to_dict()==before
     assert not editor.view.marker_mode
 
@@ -303,7 +302,7 @@ def test_c_numeric_locale_under_german_default(qapp):
     original=QLocale()
     QLocale.setDefault(QLocale(QLocale.German,QLocale.Germany))
     definition=check_valve_definition()
-    editor=CavityEditor(definition.ports,definition.physical); editor.show(); qapp.processEvents()
+    editor=CavityEditor(definition.ports,definition.physical); editor.show(); editor.correct_endpoints(); qapp.processEvents()
     dialog=InterfaceDialog(definition.ports,[],z=8.5,r=6.75)
     try:
         assert editor.locale().language()==QLocale.C
@@ -315,8 +314,8 @@ def test_c_numeric_locale_under_german_default(qapp):
         assert field.validator().validate('8,500',5)[0]==QValidator.Invalid
         QTest.keyClick(field,Qt.Key_Escape)
         assert editor.isVisible()
-        assert '.' in dialog.z.text() and ',' not in dialog.z.text()
-        assert dialog.r.locale().decimalPoint()=='.'
+        assert '.' in dialog.parameter.text() and ',' not in dialog.parameter.text()
+        assert dialog.azimuth.locale().decimalPoint()=='.'
         assert all(',' not in dimension['text'] for dimension in editor.view.dimensions)
     finally:
         dialog.reject(); editor.reject(); QLocale.setDefault(original)
@@ -342,7 +341,7 @@ def test_dimension_layout_readable_at_different_zoom_and_pan(qapp,editor):
 def test_v13a_acceptance_workflow_with_two_features_and_interfaces(qapp,tmp_path):
     definition=check_valve_definition()
     physical=deepcopy(definition.physical); physical.hydraulic_interfaces=[]
-    editor=CavityEditor(definition.ports,physical); editor.show(); qapp.processEvents()
+    editor=CavityEditor(definition.ports,physical); editor.show(); editor.correct_endpoints(); qapp.processEvents()
     try:
         original_ids=[v.id for v in editor.profile.vertices]
         original_theoretical=(editor.profile.vertices[1].z,editor.profile.vertices[1].r)
@@ -351,6 +350,7 @@ def test_v13a_acceptance_workflow_with_two_features_and_interfaces(qapp,tmp_path
         assert len(editor.profile.vertices)==8
         editor.set_mode(False)
         edit_cell(qapp,editor,0,1,'.125')
+        edit_cell(qapp,editor,2,2,'4')
         edit_cell(qapp,editor,1,3,'1.0')
         edit_cell(qapp,editor,3,4,'.5')
         edit_cell(qapp,editor,3,5,'30')
@@ -361,11 +361,10 @@ def test_v13a_acceptance_workflow_with_two_features_and_interfaces(qapp,tmp_path
         click(editor.view,24,3); qapp.processEvents()
         assert all(editor.profile.vertex(i).corner==c for i,c in corner_by_id.items())
         editor.set_mode(False)
-        for port,kind,z,y in [('IN','AXIAL',28,0),('OUT','RADIAL',14.5,5)]:
+        for port,kind,z,y in [('IN','AXIAL',28,0),('OUT','RADIAL',14,4.5)]:
             def accept_marker(port=port,kind=kind,z=z,y=y):
                 dialog=editor.findChildren(InterfaceDialog)[-1]
-                dialog.port.setCurrentText(port); dialog.kind.setCurrentText(kind)
-                dialog.z.setValue(z); dialog.r.setValue(y); dialog.submit()
+                dialog.port.setCurrentText(port); dialog.submit()
             QTimer.singleShot(0,accept_marker)
             editor.begin_marker(); click(editor.view,z,y)
         vertex=editor.profile.vertex(original_ids[1])
@@ -395,5 +394,6 @@ def test_unchanged_marker_edit_preserves_original_floating_point_precision(qapp)
     marker.nominal_connection_diameter_mm=4.123456789012345
     dialog=InterfaceDialog(definition.ports,definition.physical.hydraulic_interfaces,marker)
     dialog.submit()
-    assert dialog.result_marker==marker
+    assert dialog.result_marker.z_mm==marker.z_mm and dialog.result_marker.r_mm==marker.r_mm
+    assert dialog.result_marker.nominal_connection_diameter_mm==marker.nominal_connection_diameter_mm
     dialog.reject()

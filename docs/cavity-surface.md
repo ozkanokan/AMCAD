@@ -1,4 +1,4 @@
-# V1.4 surface and hydraulic port contract
+# V1.4a surface and hydraulic port contract
 
 The existing profile version 1 remains authoritative: original Z/r vertices, UUIDs,
 parametric corner features and fixed Z=0/Y=0 datum. Project/graph version 5 introduces
@@ -14,8 +14,10 @@ circular fillets and chamfer cuts. Revolve a point (z,r) as:
 
 Circumferential angle phi is in degrees from +X toward +Y, viewed from +Z.
 Z is positive depth; the sketch's nonnegative radial Y is still persisted as `r`.
-In physical projections, actual Y may be negative. The surface's endpoint rings
-remain open. There are no end caps, artificial axis-closing segments or volume.
+In physical projections, actual Y may be negative. Valid REVOLVED_PROFILE theoretical endpoints lie at Y=0. The virtual last-to-first
+axis closure participates in validation and endpoint treatments only; it is not an
+extra surface patch. No CAD solid is produced. Old off-axis profiles retain their
+open rings on load but show INVALID until explicitly corrected in the editor.
 
 `surface_anchor` contains:
 
@@ -53,16 +55,19 @@ coordinate/type/direction/nominal-diameter fields, and adds:
 | `direction` | Normalized [dx,dy,dz], or null for compatible legacy defaults |
 | `section` | ChannelSection below, or null for a legacy nominal-diameter circle |
 | `section_rotation_deg` | Rotation in the perpendicular local section plane |
-| `preview_length_mm` | Positive finite visualization-only length; default 10 |
+| `preview_length_mm` | Positive total visualization extent; new default 2 mm |
+| `preview_mode` | CENTERED for new ports; absent legacy field loads as FORWARD |
 
 New surface ports use `interface_type: "SURFACE"`. Their legacy z/r fields may
 contain cached axial/radial values; anchored resolution always takes precedence.
 XYZ is derived by `interface_pose()` and displayed in the dialog. It is not an
 independent coordinate capable of overriding the anchor. Arbitrary nonzero finite
 directions normalize safely; existing unit vectors retain their values on reload.
-New ports initialize direction from the local wall normal, toward increasing radial
-distance where the wall permits it; shoulder normals follow profile traversal.
-Explicitly edited directions may point anywhere and never constrain routing.
+New ports initialize from the outward void-to-material normal. Closed-profile signed
+area determines orientation, including non-monotonic Z traversal. Edited directions
+normalize and must satisfy dot(d,n)>1e-6: inward vectors reverse, zero and near-tangent
+vectors reject. This is local validation, not a global collision guarantee. Legacy
+directions are never changed on load.
 
 Section types:
 
@@ -71,14 +76,15 @@ Section types:
 - RECTANGLE: `width_mm` > 0, `height_mm` > 0.
 
 Inactive section dimensions keep default metadata. Circle channel diameter and the
-legacy nominal connection diameter are independent editable values. Slots use local
+legacy nominal connection diameter are independent stored values. Slots use local
 U as their long axis; rectangles use U for width and V for height.
 
 To build a deterministic perpendicular frame, choose the world axis least aligned
 with normalized direction D (ties X, Y, Z). Set U = normalize(reference × D),
 V = D × U. For section rotation a, U' = U*cos(a)+V*sin(a),
-V' = -U*sin(a)+V*cos(a). Extrusion starts at resolved XYZ and ends at
-XYZ + D*preview_length_mm. Its capped channel mesh is visualization only; it is
+V' = -U*sin(a)+V*cos(a). CENTERED extrusion spans XYZ ± D*preview_length_mm/2; the routing origin remains XYZ.
+Legacy FORWARD extrusion spans XYZ to XYZ + D*preview_length_mm. Missing legacy
+length loads as 10 mm; explicit lengths remain unchanged. Its capped channel mesh is visualization only; it is
 never intersected with, trimmed from or subtracted from the uncapped cavity surface.
 
 ## Legacy behavior and limitations
@@ -97,3 +103,20 @@ CAD intersection. Very dense profiles can render slowly. Save may retain invalid
 anchors for explicit repair; warnings and table status remain visible after reopen.
 There are no CAD solids, manufacturing tolerances, Boolean operations, surface
 trimming, drilling intersections, Rhino/STEP integration, routing or CFD.
+
+## V1.4a compatibility and display
+
+Hydraulic-dialog values display exactly three decimals under C locale. Unedited
+anchor, direction, section, rotation and preview values retain original precision.
+On legacy port editing, an exact surface match at the original XYZ can provide an
+anchor; ambiguous axis locations and off-surface positions remain unanchored. No
+nearest-point snapping or guessed azimuth is performed. Migration changes neither
+schematic port IDs nor physical marker IDs. Loading never repairs geometry.
+
+The cavity editor runs strict REVOLVED_PROFILE validation and disables Save for
+invalid boundaries. General project/definition validation retains compatibility
+with older open profiles so schematic save/load/export remains available. Use
+PhysicalDefinition.validate(ports, strict=True) or profile.validate(revolved=True)
+when validating a finished cavity. Invalid anchored features remain flagged, never
+retargeted. Profiles with internal axis contact, closure overlap, zero enclosed area
+or sampled self-intersection are invalid. Arc intersection checks remain tessellated.

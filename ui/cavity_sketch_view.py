@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (QGraphicsView, QGraphicsScene, QGraphicsEllipseIt
 from PySide6.QtCore import Qt, Signal, QPointF, QRectF
 from PySide6.QtGui import QPainter, QPainterPath, QPainterPathStroker, QPen, QColor, QPolygonF
 from core.cavity import snapped, point
-from core.cavity_surface import interface_pose, channel_mesh
+from core.cavity_surface import interface_pose, channel_mesh, surface_patches, anchor_key
 
 
 def hull(points):
@@ -94,6 +94,7 @@ class ProfilePointItem(QGraphicsEllipseItem):
     def itemChange(self, change, value):
         if self.ready and change == QGraphicsItem.ItemPositionChange:
             z, y = snapped(value.x(), -value.y(), self.view.snap_increment)
+            if self.view.lock_endpoints and self.vertex.id in (self.view.profile.vertices[0].id,self.view.profile.vertices[-1].id): y=self.vertex.r
             try:
                 self.view.profile.edit_point(self.vertex.id, z, y)
             except ValueError as error:
@@ -152,6 +153,8 @@ class CavitySketchView(QGraphicsView):
         super().__init__()
         self.profile = profile
         self.interfaces = interfaces
+        self.lock_endpoints = False
+        self.feature_highlight = None
         self.snap_increment = .5
         self.add_mode = not bool(profile.vertices)
         self.insert_after = None
@@ -172,6 +175,8 @@ class CavitySketchView(QGraphicsView):
         self.drag_before = None
         self.setScene(QGraphicsScene(self))
         self.setSceneRect(-1000, -1000, 2000, 2000)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setMouseTracking(True)
         self.setRenderHint(QPainter.Antialiasing)
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
@@ -224,6 +229,7 @@ class CavitySketchView(QGraphicsView):
         self.marker_items = {}
         self.marker_labels = {}; self.channel_items = {}
         self.hovered_id = None
+        self.feature_item=None
         self.scene().clear()
         self.path_item = QGraphicsPathItem()
         self.path_item.setPen(QPen(QColor('#23465c'), 2))
@@ -319,6 +325,22 @@ class CavitySketchView(QGraphicsView):
             channel.setPath(path); channel.setBrush(QColor('#ffcf65' if marker.isSelected() else '#e3a464'))
             channel.setOpacity(.45)
 
+    def highlight_feature(self,anchor):
+        self.feature_highlight=anchor
+        if getattr(self,'feature_item',None) is None:
+            self.feature_item=QGraphicsPathItem(); self.feature_item.setPen(QPen(QColor('#dd7c25'),0)); self.feature_item.setZValue(2)
+            self.feature_item.setAcceptedMouseButtons(Qt.NoButton); self.scene().addItem(self.feature_item)
+        path=QPainterPath()
+        if anchor:
+            try:
+                patch=next(p for p in surface_patches(self.profile) if anchor_key(p.anchor)==anchor_key(anchor))
+                for index in range(33):
+                    (z,y),_=patch.evaluate(index/32)
+                    if index==0: path.moveTo(z,-y)
+                    else: path.lineTo(z,-y)
+            except (ValueError,StopIteration): pass
+        self.feature_item.setPath(path)
+
     def clear_preview(self):
         if self.preview_item is not None:
             self.preview_item.setPath(QPainterPath())
@@ -347,7 +369,7 @@ class CavitySketchView(QGraphicsView):
             elif not hit and not marker and self.add_mode:
                 z, y = snapped(pos.x(), -pos.y(), self.snap_increment)
                 try:
-                    vertex = self.profile.add_point(z, y, self.insert_after)
+                    vertex = self.profile.add_point(z,y,self.insert_after or (self.profile.vertices[-2].id if self.lock_endpoints and len(self.profile.vertices)>=2 else None))
                 except ValueError as error:
                     self.message.emit(f'Point not added: {error}')
                     event.accept()
@@ -386,7 +408,7 @@ class CavitySketchView(QGraphicsView):
         if self.add_mode and not self.marker_mode and self.profile.vertices:
             pos = self.mapToScene(event.position().toPoint())
             z, y = snapped(pos.x(), -pos.y(), self.snap_increment)
-            vertex = self.profile.vertex(self.insert_after) if self.insert_after else self.profile.vertices[-1]
+            vertex = self.profile.vertex(self.insert_after) if self.insert_after else self.profile.vertices[-2] if self.lock_endpoints and len(self.profile.vertices)>=2 else self.profile.vertices[-1]
             path = QPainterPath(QPointF(vertex.z, -vertex.r))
             path.lineTo(z, -y)
             self.preview_item.setPath(path)

@@ -64,7 +64,8 @@ class HydraulicInterface:
     direction: tuple | None = None
     section: ChannelSection | None = None
     section_rotation_deg: float = 0
-    preview_length_mm: float = 10
+    preview_length_mm: float = 2
+    preview_mode: str = 'CENTERED'
 
     def __post_init__(self):
         if self.direction is not None:
@@ -74,6 +75,9 @@ class HydraulicInterface:
     @classmethod
     def from_dict(cls, data):
         data = deepcopy(data)
+        # Missing fields in older files retain the historical one-sided 10 mm preview.
+        data.setdefault('preview_length_mm',10)
+        data.setdefault('preview_mode','FORWARD')
         if data.get('surface_anchor') is not None:
             data['surface_anchor'] = SurfaceAnchor(**data['surface_anchor'])
         if data.get('section') is not None:
@@ -94,6 +98,7 @@ class HydraulicInterface:
             unit=normalized(self.direction)
             if abs(math.hypot(*self.direction)-1)>1e-12: self.direction=unit
         if self.section is not None: self.section.validate()
+        if self.preview_mode not in ('CENTERED','FORWARD'): raise ValueError('Unknown preview mode')
         finite_number(self.section_rotation_deg,'Section rotation')
         if finite_number(self.preview_length_mm,'Preview length')<=0:
             raise ValueError('Preview length must be positive')
@@ -175,7 +180,7 @@ class CavityProfile:
         index=next(i for i,v in enumerate(self.vertices) if v.id==vertex_id)
         candidate=deepcopy(self); del candidate.vertices[index]
         for i,v in enumerate(candidate.vertices):
-            if i in (0,len(candidate.vertices)-1) and v.corner.type!='SHARP':
+            if i in (0,len(candidate.vertices)-1) and v.corner.type!='SHARP' and not candidate.axis_closed():
                 raise ValueError('Return the adjacent corner to SHARP before deleting its supporting point')
         if any(v.corner.type!='SHARP' for v in candidate.vertices): candidate.features()
         del self.vertices[index]
@@ -187,6 +192,9 @@ class CavityProfile:
         if corner.type!='SHARP': candidate.validate()
         self.vertex(vertex_id).corner=deepcopy(corner)
 
+    def axis_closed(self):
+        return len(self.vertices)>=3 and self.vertices[0].r==0 and self.vertices[-1].r==0
+
     def features(self):
         """Exact tangent points/arc centers; vertices remain authoritative."""
         features=[]
@@ -195,8 +203,9 @@ class CavityProfile:
             corner.validate()
             if corner.type=='SHARP':
                 features.append({'kind':'sharp','entry':p,'exit':p,'setback_in':0,'setback_out':0}); continue
-            if i==0 or i==len(self.vertices)-1: raise ValueError('Corner treatment needs two adjacent segments')
-            a,b=point(self.vertices[i-1]),point(self.vertices[i+1])
+            if (i==0 or i==len(self.vertices)-1) and not self.axis_closed():
+                raise ValueError('Endpoint treatment needs adjacent geometry from two axis endpoints and a virtual closure edge')
+            a,b=point(self.vertices[(i-1)%len(self.vertices)]),point(self.vertices[(i+1)%len(self.vertices)])
             la,lb=distance(a,p),distance(b,p)
             if min(la,lb)<=EPS: raise ValueError('Corner has a zero-length adjacent segment')
             u=((a[0]-p[0])/la,(a[1]-p[1])/la); w=((b[0]-p[0])/lb,(b[1]-p[1])/lb)
@@ -228,12 +237,18 @@ class CavityProfile:
         for i in range(len(self.vertices)-1):
             if features[i]['setback_out']+features[i+1]['setback_in']>=distance(point(self.vertices[i]),point(self.vertices[i+1]))-EPS:
                 raise ValueError('Adjacent corner treatments overlap or consume a segment')
+        if self.axis_closed():
+            if features[-1]['setback_out']+features[0]['setback_in']>=distance(point(self.vertices[-1]),point(self.vertices[0]))-EPS:
+                raise ValueError('Endpoint treatments overlap on the virtual closure edge')
         return features
 
     def pieces(self):
         features=self.features(); pieces=[]
         if not features: return pieces
-        current=features[0]['exit']
+        first=features[0]
+        if first['kind']=='arc': pieces.append(first)
+        elif first['kind']=='chamfer': pieces.append({'kind':'line','start':first['entry'],'end':first['exit']})
+        current=first['exit']
         for feature in features[1:]:
             pieces.append({'kind':'line','start':current,'end':feature['entry']})
             if feature['kind']=='arc': pieces.append(feature)
@@ -255,7 +270,7 @@ class CavityProfile:
                 if not result or distance(result[-1],p)>EPS: result.append(p)
         return result
 
-    def validation_errors(self):
+    def validation_errors(self, revolved=False):
         try:
             if self.schema_version!=1 or self.units!='mm': raise ValueError('Unsupported cavity profile version or units')
             if self.datum!={'mounting_face_z_mm':0,'positive_z':'DEPTH_INTO_MANIFOLD','revolve_axis_r_mm':0}:
@@ -267,6 +282,10 @@ class CavityProfile:
                 finite(v.z,'Z'); finite(v.r,'Y')
                 if v.r<0: raise ValueError('Y cannot be negative')
             if len(self.vertices)<2: raise ValueError('At least two profile points are required')
+            if revolved:
+                if self.vertices[0].r!=0 or self.vertices[-1].r!=0:
+                    raise ValueError('REVOLVED_PROFILE first and last Y must be zero; explicitly correct legacy endpoints')
+                if len(self.vertices)<3: raise ValueError('A finished cavity needs at least three theoretical vertices')
             raw=[point(v) for v in self.vertices]
             if any(distance(a,b)<=EPS for a,b in zip(raw,raw[1:])): raise ValueError('Coincident points / zero-length segment')
             for a,b,c in zip(raw,raw[1:],raw[2:]):
@@ -282,11 +301,24 @@ class CavityProfile:
                 for j in range(i+2,len(displayed)-1):
                     if intersection(displayed[i],displayed[i+1],displayed[j],displayed[j+1]):
                         raise ValueError('Treated profile has a self-intersection')
+            if revolved or self.axis_closed():
+                # Virtual closure is used only for validation; it is not a wall surface.
+                if distance(displayed[0],displayed[-1])<=EPS:
+                    raise ValueError('Degenerate virtual closure boundary')
+                if abs(displayed[0][1])>EPS or abs(displayed[-1][1])>EPS:
+                    raise ValueError('Evaluated endpoints must meet the revolve axis')
+                if any(y<=EPS for _,y in displayed[1:-1]):
+                    raise ValueError('Profile touches or overlaps the virtual closure axis')
+                for a,b in zip(displayed[1:-2],displayed[2:-1]):
+                    if intersection(a,b,displayed[-1],displayed[0]):
+                        raise ValueError('Profile intersects the virtual closure edge')
+                area=sum(a[0]*b[1]-b[0]*a[1] for a,b in zip(displayed,displayed[1:]+displayed[:1]))/2
+                if abs(area)<=EPS: raise ValueError('Cavity must enclose a nonzero cross-sectional area')
             return []
         except (ValueError,TypeError) as error: return [str(error)]
 
-    def validate(self):
-        errors=self.validation_errors()
+    def validate(self, revolved=False):
+        errors=self.validation_errors(revolved=revolved)
         if errors: raise ValueError(errors[0])
         return self
 
@@ -312,12 +344,13 @@ class PhysicalDefinition:
         data['hydraulic_interfaces']=[HydraulicInterface.from_dict(i) for i in data.get('hydraulic_interfaces',[])]
         return cls(**data)
 
-    def validate(self,ports):
+    def validate(self,ports,strict=False):
+        """Strict finished-cavity checks; default permits unchanged legacy project data."""
         if self.cavity_type=='NONE':
             if self.cavity_profile is not None or self.hydraulic_interfaces: raise ValueError('NONE cavity must not contain profile/interfaces')
             return self
         if self.cavity_type!='REVOLVED_PROFILE' or self.cavity_profile is None: raise ValueError('Invalid cavity type/profile')
-        self.cavity_profile.validate()
+        self.cavity_profile.validate(revolved=strict)
         mapped=set(); ids=set()
         for interface in self.hydraulic_interfaces:
             interface.validate({p.id for p in ports})

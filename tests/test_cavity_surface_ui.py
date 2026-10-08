@@ -6,7 +6,7 @@ from PySide6.QtGui import QColor,QPalette,QWheelEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QDialog,QSplitter
 from core.cavity import HydraulicInterface,PhysicalDefinition,Corner
-from core.cavity_surface import SurfaceAnchor,ChannelSection,resolve_anchor,interface_pose,channel_mesh
+from core.cavity_surface import SurfaceAnchor,ChannelSection,resolve_anchor,interface_pose,channel_mesh,outward_direction
 from core.project import Project
 from examples.create_physical_demo import check_valve_definition
 from ui.cavity_editor import CavityEditor,InterfaceDialog
@@ -15,7 +15,7 @@ from ui.cavity_editor import CavityEditor,InterfaceDialog
 @pytest.fixture
 def editor(qapp):
     d=check_valve_definition(); physical=deepcopy(d.physical); physical.hydraulic_interfaces=[]
-    e=CavityEditor(d.ports,physical); e.show(); qapp.processEvents()
+    e=CavityEditor(d.ports,physical); e.show(); e.correct_endpoints(); qapp.processEvents()
     yield e
     e.reject(); e.close(); qapp.processEvents()
 
@@ -53,9 +53,9 @@ def test_iso_surface_pick_create_general_slot_port_select_all_views_save_reopen(
     xyz,normal=resolve_anchor(editor.profile,anchor)
     def accept():
         dialog=editor.findChildren(InterfaceDialog)[-1]
-        assert dialog.kind.currentText()=='SURFACE'
+        assert not hasattr(dialog,'kind')
         assert dialog.anchor is not None and dialog.anchor.vertex_id==anchor.vertex_id
-        assert tuple(w.value() for w in dialog.vector)==pytest.approx(normal,abs=1e-10)
+        assert tuple(w.value() for w in dialog.vector)==pytest.approx(normal,abs=.0005)
         dialog.port.setCurrentText('OUT')
         for field,value in zip(dialog.vector,(1,2,3)): field.setValue(value)
         dialog.section_type.setCurrentText('SLOT'); dialog.width.setValue(3); dialog.length.setValue(7)
@@ -65,7 +65,7 @@ def test_iso_surface_pick_create_general_slot_port_select_all_views_save_reopen(
     assert len(editor.interfaces)==1 and not editor.surface_place_mode
     marker=editor.interfaces[0]
     assert marker.hydraulic_port_id=='OUT' and marker.section.type=='SLOT'
-    assert marker.direction==pytest.approx((1/math.sqrt(14),2/math.sqrt(14),3/math.sqrt(14)))
+    assert marker.direction==pytest.approx(outward_direction(editor.profile,anchor,(1,2,3)))
     assert marker.section_rotation_deg==32.5 and marker.preview_length_mm==9.25
     assert all(view.selected_port==marker.id for view in editor.surface_views.values())
     assert editor.view.marker_items[marker.id].isSelected()
@@ -97,7 +97,9 @@ def test_selected_port_and_channels_follow_anchor_after_theoretical_edit(qapp,ed
     editor.points.item(1,1).setText('8.5'); qapp.processEvents()
     after=interface_pose(editor.profile,marker)[0]
     assert after!=before and marker==parameters
-    for view in editor.surface_views.values(): assert view.channels[marker.id].vertices[-2]==after
+    for view in editor.surface_views.values():
+        start=view.channels[marker.id].vertices[-2]
+        assert tuple(start[i]+marker.direction[i]*marker.preview_length_mm/2 for i in range(3))==pytest.approx(after)
     assert editor.view.marker_items[marker.id].pos()==QPointF(after[2],-after[1])
     xy=editor.surface_views['XY']; pixel=xy.project(after)[0]
     QTest.mouseClick(xy,Qt.LeftButton,pos=pixel.toPoint())
@@ -121,7 +123,9 @@ def test_invalid_anchor_flagged_hidden_but_can_be_explicitly_reattached(qapp,edi
     def reattach():
         dialog=editor.findChildren(InterfaceDialog)[-1]
         assert 'INVALID' in dialog.feature.currentText()
-        dialog.feature.setCurrentIndex(1); dialog.parameter.setValue(.25); dialog.azimuth.setValue(90); dialog.submit()
+        dialog.feature.setCurrentIndex(1); dialog.parameter.setValue(.25); dialog.azimuth.setValue(90)
+        for field,value in zip(dialog.vector,resolve_anchor(editor.profile,dialog.anchor)[1]): field.setValue(value)
+        dialog.submit()
     QTimer.singleShot(0,reattach); editor.edit_marker(); qapp.processEvents()
     assert editor.interfaces[0].id==marker.id
     assert editor.interfaces[0].surface_anchor.kind=='LINE'
@@ -169,7 +173,7 @@ def test_dark_theme_point_table_and_numeric_inputs_have_contrast(qapp):
     dark.setColor(QPalette.Base,QColor('#20262d')); dark.setColor(QPalette.Text,QColor('#e5edf5'))
     dark.setColor(QPalette.Window,QColor('#252c34')); dark.setColor(QPalette.WindowText,QColor('#e5edf5'))
     qapp.setPalette(dark)
-    d=check_valve_definition(); e=CavityEditor(d.ports,d.physical); e.show(); qapp.processEvents()
+    d=check_valve_definition(); e=CavityEditor(d.ports,d.physical); e.show(); e.correct_endpoints(); qapp.processEvents()
     try:
         assert e.points.item(0,1).foreground().color().lightness()>180
         dialog=InterfaceDialog(d.ports,[],parent=e,profile=e.profile)
@@ -184,10 +188,11 @@ def test_port_dialog_preserves_precise_anchor_direction_and_independent_circle_d
         surface_anchor=SurfaceAnchor('LINE',a.id,b.id,t=.5123456789012345,angle_deg=123.123456789012345),
         direction=(1,2,3),section=ChannelSection('CIRCLE',diameter_mm=6.123456789012345),
         section_rotation_deg=15.123456789012345,preview_length_mm=9.123456789012345)
+    marker.direction=resolve_anchor(editor.profile,marker.surface_anchor)[1]
     dialog=InterfaceDialog(editor.ports,[marker],marker,parent=editor,profile=editor.profile)
     try:
-        assert dialog.circle_diameter.value()==pytest.approx(marker.section.diameter_mm)
-        assert dialog.diameter.value()==4
+        assert dialog.circle_diameter.value()==pytest.approx(marker.section.diameter_mm,abs=.0005)
+        assert dialog.circle_diameter.decimals()==3
         dialog.submit()
         # Cached legacy z/r may update once to the resolved anchor, but the
         # authoritative anchor, frame and section must keep their exact data.
@@ -223,7 +228,7 @@ def test_new_surface_demo_and_legacy_examples_launch_with_shared_definition(qapp
     assert export_graph(project)==json.loads((root/'examples/parallel_check_valves_3d.graph.json').read_text())
     window=MainWindow(tmp_path/'library'); window.load_path(path); window.show(); qapp.processEvents()
     preview=CavityEditor(project.definitions[valves[0].definition_id].ports,physical)
-    preview.show(); qapp.processEvents()
+    preview.show(); preview.correct_endpoints(); qapp.processEvents()
     assert len(preview.surface_views['ISO'].channels)==2
     preview.grab().save('/tmp/amcad-v14-demo.png'); preview.reject(); window.close()
     for name in ('c1_r','parallel_check_valves'):

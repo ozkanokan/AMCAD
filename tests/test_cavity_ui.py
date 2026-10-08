@@ -27,17 +27,18 @@ def click_point(editor,z,r):
 
 def test_visual_creation_drag_snap_numeric_insert_delete(qapp):
     ports=[PortDefinition('IN','IN'),PortDefinition('OUT','OUT')]
-    editor=CavityEditor(ports); editor.show(); qapp.processEvents()
+    editor=CavityEditor(ports); editor.show(); editor.correct_endpoints(); qapp.processEvents()
     assert editor.validity.text().startswith('INVALID')
     editor.view.resetTransform(); editor.view.scale(25,25); editor.view.centerOn(10,-5)
+    editor.points.item(1,1).setText("30")
     for z,r in [(0.31,4.74),(10,5),(10,8),(25,8)]:
         click_point(editor,z,r); qapp.processEvents()
-    assert len(editor.profile.vertices)==4
-    first=editor.profile.vertices[0]
+    assert len(editor.profile.vertices)==6
+    first=editor.profile.vertices[1]
     assert (first.z,first.r)==(.5,4.5)
     assert editor.validity.text()=='VALID'
     editor.view.scene().clearSelection(); editor.view.point_items[first.id].setSelected(True)
-    editor.points.item(0,1).setText('.123456'); editor.points.item(0,2).setText('4.654321'); qapp.processEvents()
+    editor.points.item(1,1).setText('.123456'); editor.points.item(1,2).setText('4.654321'); qapp.processEvents()
     assert (first.z,first.r)==(.123456,4.654321)  # Numeric input bypasses grid snap.
     start=editor.view.mapFromScene(QPointF(first.z,-first.r)); end=start+QPoint(19,-13)
     editor.set_mode(False)
@@ -47,9 +48,9 @@ def test_visual_creation_drag_snap_numeric_insert_delete(qapp):
     assert first.z%.5==pytest.approx(0) and first.r%.5==pytest.approx(0)
     assert first.id==editor.selected_id
     editor.insert_point(); click_point(editor,5,5.5); qapp.processEvents()
-    inserted=editor.profile.vertices[1]
-    assert (inserted.z,inserted.r)==(5,5.5) and len(editor.profile.vertices)==5
-    editor.delete_point(); assert len(editor.profile.vertices)==4
+    inserted=editor.profile.vertices[2]
+    assert (inserted.z,inserted.r)==(5,5.5) and len(editor.profile.vertices)==7
+    editor.delete_point(); assert len(editor.profile.vertices)==6
     # Dragging below the fixed axis clamps to R=0, never a negative radius.
     editor.view.point_items[first.id].setPos(first.z,10)
     assert first.r==0
@@ -58,7 +59,7 @@ def test_visual_creation_drag_snap_numeric_insert_delete(qapp):
 
 def test_corner_controls_exact_profile_mirror_and_invalid_rollback(qapp):
     definition=check_valve_definition(); editor=CavityEditor(definition.ports,definition.physical)
-    editor.show(); qapp.processEvents()
+    editor.show(); editor.correct_endpoints(); qapp.processEvents()
     vertex=editor.profile.vertices[1]; editor.view.point_items[vertex.id].setSelected(True)
     editor.points.item(1,3).setText('.75')
     assert vertex.corner.radius_mm==.75 and len(editor.profile.vertices)==6
@@ -80,28 +81,26 @@ def test_corner_controls_exact_profile_mirror_and_invalid_rollback(qapp):
 
 def test_interface_marker_placement_edit_and_duplicate_block(qapp):
     definition=check_valve_definition(); physical=deepcopy(definition.physical); physical.hydraulic_interfaces=[]
-    editor=CavityEditor(definition.ports,physical); editor.show(); qapp.processEvents()
+    editor=CavityEditor(definition.ports,physical); editor.show(); editor.correct_endpoints(); qapp.processEvents()
     assert 'IN' in editor.warnings.text() and 'OUT' in editor.warnings.text()
     def accept_interface():
         dialog=editor.findChild(InterfaceDialog)
-        dialog.port.setCurrentText('OUT'); dialog.kind.setCurrentText('RADIAL')
-        dialog.z.setValue(14.5); dialog.r.setValue(5); dialog.direction.setCurrentText('RADIAL'); dialog.submit()
+        dialog.port.setCurrentText('OUT'); dialog.submit()
     QTimer.singleShot(0,accept_interface)
     editor.begin_marker(); click_point(editor,14.5,5); qapp.processEvents()
     assert len(editor.interfaces)==1 and editor.interfaces[0].hydraulic_port_id=='OUT'
-    assert editor.interfaces[0].z_mm==14.5 and editor.interfaces[0].interface_type=='RADIAL'
-    duplicate=InterfaceDialog(definition.ports,editor.interfaces)
+    assert editor.interfaces[0].z_mm==14.5 and editor.interfaces[0].interface_type=='SURFACE'
+    duplicate=InterfaceDialog(definition.ports,editor.interfaces,profile=editor.profile,anchor=editor.interfaces[0].surface_anchor)
     assert [duplicate.port.itemText(i) for i in range(duplicate.port.count())]==['IN']
-    duplicate.port.setCurrentText('IN'); duplicate.kind.setCurrentText('AXIAL'); duplicate.z.setValue(28)
-    duplicate.direction.setCurrentText('AXIAL_POSITIVE'); duplicate.submit()
+    duplicate.port.setCurrentText('IN'); duplicate.submit()
     editor.interfaces.append(duplicate.result_marker); editor.refresh_markers(); editor.profile_changed()
     assert not editor.warnings.text()
     marker_id=editor.interfaces[0].id; editor.markers.selectRow(0)
     def edit_interface():
         dialogs=editor.findChildren(InterfaceDialog)
-        dialog=dialogs[-1]; dialog.z.setValue(15.125); dialog.submit()
+        dialog=dialogs[-1]; dialog.parameter.setValue(.59375); dialog.submit()
     QTimer.singleShot(0,edit_interface); editor.edit_marker()
-    assert editor.interfaces[0].id==marker_id and editor.interfaces[0].z_mm==15.125
+    assert editor.interfaces[0].id==marker_id and editor.interfaces[0].surface_anchor.t==.594
     editor.submit(); editor.result_physical.validate(definition.ports)
 
 
@@ -116,7 +115,7 @@ def test_wizard_integrates_cavity_and_library_reopen(qapp,tmp_path):
         sample=check_valve_definition().physical
         editor.profile.vertices=deepcopy(sample.cavity_profile.vertices)
         editor.interfaces.extend(deepcopy(sample.hydraulic_interfaces))
-        editor.view.rebuild(); editor.profile_changed(); editor.submit()
+        editor.correct_endpoints(); editor.view.rebuild(); editor.profile_changed(); editor.submit()
     QTimer.singleShot(0,fill_editor); wizard.edit_cavity(); wizard.submit()
     assert wizard.result()==QDialog.Accepted and wizard.definition.physical.cavity_type=='REVOLVED_PROFILE'
     library=ComponentLibrary(tmp_path/'library'); library.save(wizard.definition)
@@ -136,6 +135,7 @@ def test_shared_definition_edit_undo_and_old_clipboard(qapp,tmp_path):
     clipboard=w.project.copy_subgraph(instance_ids)
     def edit_cavity():
         editor=w.findChild(CavityEditor)
+        editor.correct_endpoints()
         editor.view.point_items[editor.profile.vertices[-1].id].setSelected(True)
         editor.points.item(len(editor.profile.vertices)-1,1).setText('29.125'); editor.submit()
     QTimer.singleShot(0,edit_cavity); w.edit_definition_cavity(definition.id)

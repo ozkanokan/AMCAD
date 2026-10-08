@@ -86,6 +86,9 @@ class SurfacePatch:
 def surface_patches(profile):
     """IDs refer to adjacent theoretical vertices or a typed corner, never mesh indices."""
     features=profile.features(); result=[]
+    if features and features[0]['kind']!='sharp':
+        feature=features[0]; kind='FILLET' if feature['kind']=='arc' else 'CHAMFER'
+        result.append(SurfacePatch(SurfaceAnchor(kind,profile.vertices[0].id),feature if kind=='FILLET' else {'kind':'line','start':feature['entry'],'end':feature['exit']}))
     for i in range(1,len(profile.vertices)):
         previous,vertex=profile.vertices[i-1:i+1]
         result.append(SurfacePatch(SurfaceAnchor('LINE',previous.id,vertex.id),
@@ -109,10 +112,14 @@ def resolve_anchor(profile,anchor):
     (z,r),(dz,dr)=patch.evaluate(anchor.t)
     angle=math.radians(anchor.angle_deg)
     xyz=(r*math.cos(angle),r*math.sin(angle),z)
-    # Revolved wall normal toward greater radial distance; flat shoulders follow
-    # profile traversal when their normal has no radial component.
+    # Closed boundaries use traversal orientation to point from void into material.
+    # Legacy open profiles keep their historical radial-facing normal.
     normal=(dz*math.cos(angle),dz*math.sin(angle),-dr)
-    if dz<0: normal=mul(normal,-1)
+    if profile.axis_closed():
+        raw=[(v.z,v.r) for v in profile.vertices]
+        area=sum(a[0]*b[1]-b[0]*a[1] for a,b in zip(raw,raw[1:]+raw[:1]))
+        if area>0: normal=mul(normal,-1)
+    elif dz<0: normal=mul(normal,-1)
     return xyz,normalized(normal)
 
 
@@ -141,7 +148,7 @@ def revolved_surface(profile,angular_steps=64,arc_steps=16):
                 for indices,parameters in [((ids[0],ids[1],ids[2]),((row/steps,col*360/angular_steps),(row/steps,(col+1)*360/angular_steps),((row+1)/steps,col*360/angular_steps))),
                                            ((ids[1],ids[3],ids[2]),((row/steps,(col+1)*360/angular_steps),((row+1)/steps,(col+1)*360/angular_steps),((row+1)/steps,col*360/angular_steps)))]:
                     triangles.append(indices); anchors.append((patch.anchor,parameters))
-    # Open endpoint rings remain open: no end caps or implicit profile closure.
+    # Axis endpoints converge naturally; do not revolve the virtual closure edge.
     return Mesh(vertices,triangles,anchors)
 
 
@@ -185,10 +192,45 @@ def channel_mesh(profile,interface):
     if length<=0: raise ValueError('Preview length must be positive')
     u,v=section_frame(direction,interface.section_rotation_deg)
     outline=section_outline(section)
-    start=[add(position,add(mul(u,a),mul(v,b))) for a,b in outline]
+    start_position=add(position,mul(direction,-length/2)) if interface.preview_mode=='CENTERED' else position
+    start=[add(start_position,add(mul(u,a),mul(v,b))) for a,b in outline]
     end=[add(p,mul(direction,length)) for p in start]
-    n=len(outline); vertices=start+end+[position,add(position,mul(direction,length))]; triangles=[]
+    n=len(outline); vertices=start+end+[start_position,add(start_position,mul(direction,length))]; triangles=[]
     for i in range(n):
         j=(i+1)%n
         triangles.extend([(i,j,n+i),(j,n+j,n+i),(2*n,j,i),(2*n+1,n+i,n+j)])
     return Mesh(vertices,triangles)
+
+
+OUTWARD_TOLERANCE=1e-6
+
+def outward_direction(profile,anchor,direction):
+    vector=normalized(direction); _,normal=resolve_anchor(profile,anchor)
+    alignment=dot(vector,normal)
+    if abs(alignment)<=OUTWARD_TOLERANCE: raise ValueError('Channel direction is near-tangential to the cavity surface')
+    return mul(vector,-1) if alignment<0 else vector
+
+
+def legacy_surface_anchor(profile,interface,tolerance=1e-8):
+    """Exact legacy location only. Axis locations have no known circumferential angle."""
+    if interface.surface_anchor is not None: return interface.surface_anchor
+    position,_=interface_pose(profile,interface); z,r=position[2],math.hypot(*position[:2])
+    if r<=tolerance: return None
+    for patch in surface_patches(profile):
+        f=patch.feature
+        if f['kind']=='arc':
+            a=math.degrees(math.atan2(r-f['center'][1],z-f['center'][0]))
+            delta=(a-f['start_deg'])%360 if f['sweep_deg']>0 else (f['start_deg']-a)%360
+            t=delta/abs(f['sweep_deg'])
+        else:
+            dz,dr=f['end'][0]-f['start'][0],f['end'][1]-f['start'][1]
+            denominator=dz*dz+dr*dr
+            if denominator==0: continue
+            t=((z-f['start'][0])*dz+(r-f['start'][1])*dr)/denominator
+        if not -tolerance<=t<=1+tolerance: continue
+        value,_=patch.evaluate(max(0,min(1,t)))
+        if math.hypot(value[0]-z,value[1]-r)<=tolerance:
+            from copy import deepcopy
+            anchor=deepcopy(patch.anchor); anchor.t=max(0,min(1,t)); anchor.angle_deg=math.degrees(math.atan2(position[1],position[0]))%360
+            return anchor
+    return None

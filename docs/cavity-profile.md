@@ -1,4 +1,4 @@
-# V1.4 cavity profile contract
+# V1.4a cavity profile contract
 
 `ComponentDefinition.physical` contains `cavity_type` (NONE or REVOLVED_PROFILE),
 `cavity_profile` and `hydraulic_interfaces`. NONE has no profile or interfaces.
@@ -17,8 +17,8 @@ The UI uses Z horizontally and Y vertically; **R means fillet radius only**.
 The persisted `r` coordinate, interface `r_mm` and `revolve_axis_r_mm` datum key
 remain unchanged for V1.3 compatibility. The profile remains version 1; project
 and graph version 5 adds surface-port metadata without changing profile geometry.
-The ordered open profile represents one half-section; it need not close to the
-axis. The point table shows round-trippable decimal coordinates without discarding
+The ordered profile represents one half-section. Finished V1.4a cavities have
+axis endpoints; older open profiles remain loadable without geometry changes. The point table shows round-trippable decimal coordinates without discarding
 stored precision, independently of mouse grid snap. Numeric editors use the C
 locale and periods. Negative Z is allowed relative to the fixed mounting datum.
 
@@ -41,8 +41,9 @@ length * sin(angle) / sin(theta + angle). Angle must be greater than zero and le
 than 180 - theta degrees. At a right-angle corner, a 45-degree chamfer has equal
 setbacks. Both setbacks must fit; adjacent treatments cannot overlap.
 
-Endpoint treatments, straight/reversing treated corners, zero/negative dimensions
-and impossible setbacks are rejected. Applying an invalid feature is transactional;
+Endpoint treatments use a virtual closure for axis-closed profiles; unclosed
+endpoint treatments, straight/reversing corners, zero/negative dimensions and
+impossible setbacks are rejected. Applying an invalid feature is transactional;
 SHARP removes a treatment without deleting its original vertex.
 
 Mutual exclusion is validated in the model, including on load: SHARP contains no
@@ -94,3 +95,27 @@ V1.4 also revolves evaluated segments/arcs into an open visualization mesh.
 
 The parallel check-valve example uses illustrative dimensions, not a commercial
 cavity specification. The existing C1–R project remains available and unchanged.
+
+## V1.4a axis boundary rules
+
+A new editor draft contains exactly two theoretical axis vertices at (Z,Y)=(0,0)
+and (10,0). Finished REVOLVED_PROFILE cavities require at least three vertices,
+first/last Y exactly zero and nonzero enclosed cross-sectional area. Draft edits
+may retain explicit INVALID state; Save is disabled. Internal axis contact and
+closure intersection/overlap are rejected by finished-profile validation.
+
+Endpoint Y is locked in the editor; Z remains editable. Adding points inserts before
+the final axis endpoint, preserving traversal and endpoint UUIDs. The point actions
+sit under the independently collapsible theoretical-vertex table.
+
+Endpoint fillets and chamfers use the virtual last-to-first axis edge as their
+missing adjacent segment, with the same incoming-setback/angle convention as other
+corners. The virtual edge itself is not a stored vertex, rendered wall, selectable
+feature or hydraulic anchor. Endpoint tangent points meet the axis; neighboring
+treatments also validate against its available length. The theoretical endpoints
+remain unchanged. Impossible treatments preserve parameters and report errors.
+
+Legacy off-axis data is not rewritten on load. The explicit endpoint-correction
+action changes only the endpoint Y values after checking existing treatments;
+users inspect the result before saving. General project validation remains legacy
+compatible; strict finished-cavity validation is used by the cavity editor.

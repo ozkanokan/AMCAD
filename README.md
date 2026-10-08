@@ -1,7 +1,8 @@
-# AMCAD — Hydraulic Manifold Schematic Editor (V1.3)
+# AMCAD — Hydraulic Manifold Schematic Editor (V1.3a)
 
 A standalone Python / PySide6 desktop editor for hydraulic schematics and their
-graph foundation. V1.3 adds a dedicated parametric axisymmetric cavity sketcher,
+graph foundation. V1.3a refines the dedicated axisymmetric cavity sketcher with
+an editable engineering point table, Draw/Edit modes, parametric corner leaders,
 physical hydraulic-interface mappings and a mirrored cross-section preview.
 Existing manual line editing, component wizard, JSON projects, undo/redo and
 graph export remain available. No CAD kernel, physical manifold routing,
@@ -37,12 +38,15 @@ QT_QPA_PLATFORM=offscreen python -m pytest -q
 QT_QPA_PLATFORM=offscreen python -m app.main examples/c1_r.amcad.json --smoke
 ```
 
-All **184 tests** and both sample application launch checks pass on Python 3.14.4 under
+All **211 tests** and both sample application launch checks pass on Python 3.14.4 under
 Linux. Tests exercise the wizard, drag/drop, manual drawing, segment and bend
 drags, rotation, single-line occupancy, geometry persistence, undo/redo,
 copy/paste, legacy migration, completeness, crossings and graph export. Cavity tests cover
 point editing, snap, exact corner features, validation, port mappings, shared
-definitions, library/project persistence and GUI save/reopen.
+definitions, library/project persistence and GUI save/reopen. V1.3a checks also
+exercise treated-corner dragging, marker placement followed by editing, Escape
+cancellation, feature preservation during insertion, and decimal periods under
+a non-English default locale.
 `--smoke` renders the actual window and exits. Native Windows/macOS displays and
 executable packaging have not been validated.
 
@@ -125,18 +129,40 @@ entry and choose **Component → Edit Definition Cavity…** (Ctrl+Shift+C), or 
 the component properties dialog. The cavity belongs to the reusable definition:
 all instances share one profile and the same schematic port identities.
 
-- Choose NONE or REVOLVED_PROFILE. Click **Add Point**, then click in the dedicated
-  sketch to append ordered Z/R points. Select/drag points, insert after selection,
-  or delete. Numeric Z/R edits update immediately and bypass grid snapping.
-- Units are mm; R is nonnegative. R=0 is the fixed revolve axis; Z=0 is the mounting
-  face and positive Z is depth into the manifold. Snap offers OFF, 0.1, 0.5 and 1 mm.
-- Select an internal point, choose FILLET radius or CHAMFER length/angle, and Apply.
-  SHARP removes its treatment while retaining its vertex ID. Invalid corner edits
-  leave the previous feature intact. VALID/INVALID feedback explains profile errors.
+- Choose NONE or REVOLVED_PROFILE. New empty profiles start in **Draw mode**;
+  populated profiles start in **Edit mode**. Draw or **Add Point** appends vertices
+  on empty canvas clicks, with a snapped live preview. Existing point clicks select
+  without adding duplicates. Edit mode selects/drags points and never appends them.
+- The point table contains **# | Z (mm) | Y (mm) | R (mm) | Chamfer (mm) | Angle (°)**.
+  Rows show original theoretical coordinates; each row retains a hidden vertex UUID.
+  Table/sketch selection stays synchronized. Numeric edits update immediately,
+  retain floating-point precision, use decimal periods and bypass grid snapping.
+- Z is horizontal depth, Y is nonnegative vertical radial distance, and **R means
+  fillet radius only**. Y=0 is the fixed revolve axis; Z=0 is the mounting face and
+  positive Z is depth into the manifold. Snap offers OFF, 0.1, 0.5 and 1 mm.
+- At an internal vertex, enter R > 0 to activate FILLET, or Chamfer > 0 to activate
+  CHAMFER; these features replace each other. Chamfer Angle starts at 45° and is
+  directly editable. Zero the active dimension to return to SHARP; angle is inactive
+  without a chamfer. No separate Apply button is needed.
+- Corner treatments never move or replace theoretical vertices. The finished profile
+  uses derived arcs/trimmed segments, with automatic radius/chamfer leaders. Selecting
+  or hovering a treated point shows subtle dashed theoretical edge extensions.
+  Dragging it recomputes geometry while preserving its feature parameters and ID.
+- **Insert After Selected** arms the next canvas click; **Delete Point** removes
+  the selected vertex. Unaffected IDs and treatments survive append/insert/delete.
+  Impossible treatment changes are rejected and the previous value is restored.
+  Other draft errors show explicit INVALID feedback and block Save.
 - **Place Interface** adds a distinct marker mapped to an existing schematic port
-  ID. Set AXIAL/RADIAL, Z/R, nominal diameter and preferred direction. Duplicate or
+  ID. Set AXIAL/RADIAL, Z/Y, nominal diameter and preferred direction. Duplicate or
   nonexistent port mappings are rejected; missing required mappings produce warnings.
-- **Revolve Preview** mirrors the section around R=0. It does not generate a solid.
+- Markers are independently selectable; double-click one or choose **Edit Selected
+  Interface** to edit it. Placement finishes cleanly and preserves Draw/Edit mode.
+  The marker section can collapse to leave more room for the point table.
+- Escape cancels marker placement, cancels an active drag, switches Draw to Edit,
+  or clears Edit selection; committed geometry remains. It never closes the sketcher.
+  Save, Cancel and window close explicitly finish the editor; child dialogs keep
+  their normal Escape behavior.
+- **Revolve Preview** mirrors the section around Y=0. It does not generate a solid.
   Save/reopen preserves exact vertices, UUIDs, corner parameters and interfaces.
 
 Accepting an edit to a placed definition updates the project and participates in
@@ -145,6 +171,8 @@ writes are independent of project history. Project-only definitions stay embedde
 Editing a built-in library entry without a placed instance creates a custom copy.
 Cancel leaves the original definition untouched.
 
+Existing V1.3 profiles keep their saved `z`/`r` fields and datum; `r` displays as Y.
+Dimension leaders and tangent points are derived and never become saved vertices.
 See [cavity geometry conventions](docs/cavity-profile.md) for the exact parameter
 meaning, datum and validation limits.
 

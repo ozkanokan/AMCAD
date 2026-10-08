@@ -1,4 +1,4 @@
-"""Parametric axial Z/radial R cavity geometry in mm; independent of Qt/CAD."""
+"""Parametric axial Z/radial Y geometry in mm (persisted as z/r for compatibility)."""
 from copy import deepcopy
 from dataclasses import dataclass, field, asdict
 import math
@@ -19,6 +19,27 @@ class Corner:
     radius_mm: float | None = None
     length_mm: float | None = None
     angle_deg: float | None = None
+
+    def validate(self):
+        """A corner has exactly one feature, including when read from old files."""
+        if self.type == 'SHARP':
+            if any(v is not None for v in (self.radius_mm, self.length_mm, self.angle_deg)):
+                raise ValueError('SHARP must not contain fillet/chamfer parameters')
+        elif self.type == 'FILLET':
+            if self.length_mm is not None or self.angle_deg is not None:
+                raise ValueError('Fillet contains chamfer parameters')
+            if finite(self.radius_mm, 'Fillet radius') <= 0:
+                raise ValueError('Fillet radius must be positive')
+        elif self.type == 'CHAMFER':
+            if self.radius_mm is not None:
+                raise ValueError('Chamfer contains a fillet radius')
+            if finite(self.length_mm, 'Chamfer length') <= 0:
+                raise ValueError('Chamfer length must be positive')
+            if not 0 < finite(self.angle_deg, 'Chamfer angle') < 180:
+                raise ValueError('Chamfer angle must be between 0 and 180 degrees')
+        else:
+            raise ValueError('Unknown corner type')
+        return self
 
 
 @dataclass
@@ -47,8 +68,8 @@ class HydraulicInterface:
         if self.preferred_direction not in ('AXIAL_POSITIVE','AXIAL_NEGATIVE','RADIAL','UNSPECIFIED'):
             raise ValueError('Invalid preferred routing direction')
         finite(self.z_mm,'Interface Z')
-        if self.r_mm is not None and finite(self.r_mm,'Interface R') < 0:
-            raise ValueError('Interface R cannot be negative')
+        if self.r_mm is not None and finite(self.r_mm,'Interface Y') < 0:
+            raise ValueError('Interface Y cannot be negative')
         if finite(self.nominal_connection_diameter_mm,'Connection diameter') <= 0:
             raise ValueError('Connection diameter must be positive')
         if not isinstance(self.id,str) or not self.id:
@@ -92,16 +113,23 @@ class CavityProfile:
         return next(v for v in self.vertices if v.id==vertex_id)
 
     def add_point(self,z,r,after_id=None):
-        finite(z,'Z'); finite(r,'R')
-        if r<0: raise ValueError('R cannot be negative')
+        finite(z,'Z'); finite(r,'Y')
+        if r<0: raise ValueError('Y cannot be negative')
         vertex=ProfileVertex(z,r)
         index=len(self.vertices) if after_id is None else next(i for i,v in enumerate(self.vertices) if v.id==after_id)+1
         self.vertices.insert(index,vertex)
+        try:
+            # Only insert the new theoretical vertex; existing IDs/features stay intact.
+            if any(v.corner.type!='SHARP' for v in self.vertices): self.features()
+        except ValueError:
+            del self.vertices[index]
+            raise
         return vertex
 
     def edit_point(self,vertex_id,z,r):
-        finite(z,'Z'); finite(r,'R')
-        if r<0: raise ValueError('R cannot be negative')
+        """Edit only the theoretical control point; recompute features, never retune them."""
+        finite(z,'Z'); finite(r,'Y')
+        if r<0: raise ValueError('Y cannot be negative')
         v=self.vertex(vertex_id); before=(v.z,v.r)
         v.z,v.r=z,r
         try:
@@ -121,6 +149,8 @@ class CavityProfile:
         del self.vertices[index]
 
     def set_corner(self,vertex_id,corner):
+        """Associate one parametric feature with a vertex without changing its ID/position."""
+        corner.validate()
         candidate=deepcopy(self); candidate.vertex(vertex_id).corner=deepcopy(corner)
         if corner.type!='SHARP': candidate.validate()
         self.vertex(vertex_id).corner=deepcopy(corner)
@@ -130,11 +160,9 @@ class CavityProfile:
         features=[]
         for i,v in enumerate(self.vertices):
             p=point(v); corner=v.corner
+            corner.validate()
             if corner.type=='SHARP':
-                if any(x is not None for x in (corner.radius_mm,corner.length_mm,corner.angle_deg)):
-                    raise ValueError('SHARP must not contain fillet/chamfer parameters')
                 features.append({'kind':'sharp','entry':p,'exit':p,'setback_in':0,'setback_out':0}); continue
-            if corner.type not in ('FILLET','CHAMFER'): raise ValueError('Unknown corner type')
             if i==0 or i==len(self.vertices)-1: raise ValueError('Corner treatment needs two adjacent segments')
             a,b=point(self.vertices[i-1]),point(self.vertices[i+1])
             la,lb=distance(a,p),distance(b,p)
@@ -143,14 +171,10 @@ class CavityProfile:
             theta=math.acos(max(-1,min(1,u[0]*w[0]+u[1]*w[1])))
             if theta<EPS or math.pi-theta<EPS: raise ValueError('Corner needs a genuine non-collinear bend')
             if corner.type=='FILLET':
-                radius=finite(corner.radius_mm,'Fillet radius')
-                if radius<=0: raise ValueError('Fillet radius must be positive')
-                if corner.length_mm is not None or corner.angle_deg is not None: raise ValueError('Fillet contains chamfer parameters')
+                radius=corner.radius_mm
                 da=db=radius/math.tan(theta/2)
             else:
-                if corner.radius_mm is not None: raise ValueError('Chamfer contains a fillet radius')
-                da=finite(corner.length_mm,'Chamfer length'); angle=finite(corner.angle_deg,'Chamfer angle')
-                if da<=0: raise ValueError('Chamfer length must be positive')
+                da=corner.length_mm; angle=corner.angle_deg
                 if not 0<angle<180-math.degrees(theta): raise ValueError('Chamfer angle is incompatible with the included corner angle')
                 alpha=math.radians(angle); db=da*math.sin(alpha)/math.sin(theta+alpha)
             if da>=la-EPS or db>=lb-EPS: raise ValueError('Corner treatment is too large for its adjacent segments')
@@ -167,7 +191,7 @@ class CavityProfile:
                 minimum=min(entry[1],exit[1])
                 delta=(270-start)%360 if sweep>0 else (start-270)%360
                 if delta<=abs(sweep)+EPS: minimum=min(minimum,center[1]-radius)
-                if minimum < -EPS: raise ValueError('Fillet would cross the R=0 revolve axis')
+                if minimum < -EPS: raise ValueError('Fillet would cross the Y=0 revolve axis')
             features.append(feature)
         for i in range(len(self.vertices)-1):
             if features[i]['setback_out']+features[i+1]['setback_in']>=distance(point(self.vertices[i]),point(self.vertices[i+1]))-EPS:
@@ -203,13 +227,13 @@ class CavityProfile:
         try:
             if self.schema_version!=1 or self.units!='mm': raise ValueError('Unsupported cavity profile version or units')
             if self.datum!={'mounting_face_z_mm':0,'positive_z':'DEPTH_INTO_MANIFOLD','revolve_axis_r_mm':0}:
-                raise ValueError('Cavity datum must be Z=0 mounting face, positive Z depth, R=0 axis')
+                raise ValueError('Cavity datum must be Z=0 mounting face, positive Z depth, Y=0 axis')
             if not isinstance(self.id,str) or not self.id: raise ValueError('Profile needs a persistent ID')
             ids=[v.id for v in self.vertices]
             if len(ids)!=len(set(ids)) or any(not isinstance(i,str) or not i for i in ids): raise ValueError('Vertex IDs must be unique and nonempty')
             for v in self.vertices:
-                finite(v.z,'Z'); finite(v.r,'R')
-                if v.r<0: raise ValueError('R cannot be negative')
+                finite(v.z,'Z'); finite(v.r,'Y')
+                if v.r<0: raise ValueError('Y cannot be negative')
             if len(self.vertices)<2: raise ValueError('At least two profile points are required')
             raw=[point(v) for v in self.vertices]
             if any(distance(a,b)<=EPS for a,b in zip(raw,raw[1:])): raise ValueError('Coincident points / zero-length segment')
@@ -236,7 +260,7 @@ class CavityProfile:
 
 
 def snapped(z,r,increment):
-    finite(z,'Z'); finite(r,'R')
+    finite(z,'Z'); finite(r,'Y')
     if increment not in (0,.1,.5,1): raise ValueError('Unsupported grid snap')
     if increment:
         z=round(round(z/increment)*increment,10); r=round(round(r/increment)*increment,10)

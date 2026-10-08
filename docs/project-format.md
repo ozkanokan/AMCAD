@@ -1,4 +1,4 @@
-# V1.3 project and graph contracts
+# V1.3a project and graph contracts
 
 Formats are UTF-8 JSON with `schema` and integer `schema_version`. Current
 version is **4**. Version 1/2 projects migrate topology explicitly on load.

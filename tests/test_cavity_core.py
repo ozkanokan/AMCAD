@@ -121,3 +121,82 @@ def test_legacy_definition_and_v12_project_preserve_geometry():
     p=Project(); p.add_instance(loaded); data=p.to_dict(); data['schema_version']=3
     for definition in data['component_definitions']: definition.pop('physical')
     assert Project.from_dict(data).definitions[loaded.id].physical.cavity_type=='NONE'
+
+
+def test_theoretical_vertices_features_and_derived_geometry_survive_edit_and_roundtrip():
+    p=stepped_profile()
+    coordinates=[(v.id,v.z,v.r) for v in p.vertices]
+    v=p.vertices[1]
+    p.set_corner(v.id,Corner('FILLET',radius_mm=1))
+    assert [(v.id,v.z,v.r) for v in p.vertices]==coordinates
+    original_feature=deepcopy(p.features()[1])
+    corner=deepcopy(v.corner)
+    p.edit_point(v.id,11.125,5.25)
+    assert v.id==coordinates[1][0] and v.corner==corner
+    assert p.features()[1]!=original_feature
+    assert p.features()[1]['radius']==1
+    p.set_corner(v.id,Corner('CHAMFER',length_mm=.5,angle_deg=30))
+    assert (v.z,v.r)==(11.125,5.25) and v.id==coordinates[1][0]
+    data=p.to_dict()
+    loaded=CavityProfile.from_dict(data).validate()
+    assert loaded.to_dict()==data and loaded.features()==p.features()
+    assert set(data['vertices'][1])=={'id','z','r','corner'}
+    assert 'entry' not in data['vertices'][1] and 'dimensions' not in data
+
+
+def test_append_insert_delete_preserve_unaffected_treatments_transactionally():
+    p=stepped_profile()
+    p.set_corner(p.vertices[1].id,Corner('FILLET',radius_mm=.5))
+    p.set_corner(p.vertices[2].id,Corner('CHAMFER',length_mm=.4,angle_deg=30))
+    originals={v.id:deepcopy(v.corner) for v in p.vertices}
+    appended=p.add_point(30,8)
+    inserted=p.add_point(18,8,after_id=p.vertices[2].id)
+    assert all(p.vertex(i).corner==c for i,c in originals.items())
+    p.validate()
+    p.delete_point(inserted.id); p.delete_point(appended.id)
+    assert all(p.vertex(i).corner==c for i,c in originals.items())
+    p.validate()
+    before=p.to_dict()
+    with pytest.raises(ValueError,match='too large'):
+        p.add_point(10,5.1,after_id=p.vertices[1].id)
+    assert p.to_dict()==before
+    with pytest.raises(ValueError):
+        p.delete_point(p.vertices[0].id)
+    assert p.to_dict()==before
+
+
+@pytest.mark.parametrize('corner',[
+    Corner('SHARP',radius_mm=1), Corner('FILLET',radius_mm=1,length_mm=.5,angle_deg=45),
+    Corner('CHAMFER',radius_mm=1,length_mm=.5,angle_deg=30)])
+def test_model_rejects_mixed_corner_parameters_in_edits_and_saved_definitions(corner):
+    p=stepped_profile(); before=p.to_dict()
+    with pytest.raises(ValueError): p.set_corner(p.vertices[1].id,corner)
+    assert p.to_dict()==before
+    d=check_definition().to_dict()
+    d['physical']['cavity_profile']['vertices'][1]['corner']=vars(corner)
+    with pytest.raises(ValueError): ComponentDefinition.from_dict(d)
+
+
+@pytest.mark.parametrize('points',[[(0,4),(10,4),(10,10)],[(0,3),(8,7),(12,14)],
+                                  [(0,10),(8,10),(10,4)],[(0,10),(10,5),(15,10)]])
+def test_non_45_chamfer_matches_incoming_angle_and_setbacks(points):
+    p=CavityProfile([ProfileVertex(z,y) for z,y in points]); v=p.vertices[1]
+    p.set_corner(v.id,Corner('CHAMFER',length_mm=.5,angle_deg=30))
+    feature=p.features()[1]
+    assert math.dist(feature['entry'],(v.z,v.r))==pytest.approx(.5)
+    incoming=(v.z-p.vertices[0].z,v.r-p.vertices[0].r)
+    cut=tuple(b-a for a,b in zip(feature['entry'],feature['exit']))
+    angle=math.degrees(math.acos(sum(a*b for a,b in zip(incoming,cut))/(math.hypot(*incoming)*math.hypot(*cut))))
+    assert angle==pytest.approx(30)
+    assert (v.z,v.r)==points[1]
+
+
+def test_neighbor_conflict_and_regeneration_never_discard_installed_features():
+    p=stepped_profile(); a,b=p.vertices[1:3]
+    p.set_corner(a.id,Corner('FILLET',radius_mm=.5))
+    p.set_corner(b.id,Corner('CHAMFER',length_mm=.5,angle_deg=30))
+    before=p.to_dict()
+    with pytest.raises(ValueError): p.edit_point(b.id,10,5.4)
+    assert p.to_dict()==before
+    with pytest.raises(ValueError): p.set_corner(a.id,Corner('FILLET',radius_mm=2.75))
+    assert p.to_dict()==before

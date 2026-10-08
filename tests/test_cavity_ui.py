@@ -37,9 +37,10 @@ def test_visual_creation_drag_snap_numeric_insert_delete(qapp):
     assert (first.z,first.r)==(.5,4.5)
     assert editor.validity.text()=='VALID'
     editor.view.scene().clearSelection(); editor.view.point_items[first.id].setSelected(True)
-    editor.z.setValue(.123456); editor.r.setValue(4.654321); qapp.processEvents()
+    editor.points.item(0,1).setText('.123456'); editor.points.item(0,2).setText('4.654321'); qapp.processEvents()
     assert (first.z,first.r)==(.123456,4.654321)  # Numeric input bypasses grid snap.
     start=editor.view.mapFromScene(QPointF(first.z,-first.r)); end=start+QPoint(19,-13)
+    editor.set_mode(False)
     QTest.mousePress(editor.view.viewport(),Qt.LeftButton,pos=start)
     QTest.mouseMove(editor.view.viewport(),end,delay=20)
     QTest.mouseRelease(editor.view.viewport(),Qt.LeftButton,pos=end); qapp.processEvents()
@@ -59,14 +60,14 @@ def test_corner_controls_exact_profile_mirror_and_invalid_rollback(qapp):
     definition=check_valve_definition(); editor=CavityEditor(definition.ports,definition.physical)
     editor.show(); qapp.processEvents()
     vertex=editor.profile.vertices[1]; editor.view.point_items[vertex.id].setSelected(True)
-    editor.radius.setValue(.75); editor.choose_corner('FILLET')
+    editor.points.item(1,3).setText('.75')
     assert vertex.corner.radius_mm==.75 and len(editor.profile.vertices)==6
     path=profile_path(editor.profile)
     assert any(path.elementAt(i).isCurveTo() for i in range(path.elementCount()))
-    before=editor.profile.to_dict(); editor.radius.setValue(500); editor.apply_corner()
+    before=editor.profile.to_dict(); editor.points.item(1,3).setText('500')
     assert editor.profile.to_dict()==before and 'too large' in editor.feedback.text()
-    editor.choose_corner('SHARP'); assert vertex.corner.type=='SHARP'
-    editor.length.setValue(.5); editor.angle.setValue(45); editor.choose_corner('CHAMFER')
+    editor.points.item(1,3).setText('0'); assert vertex.corner.type=='SHARP'
+    editor.points.item(1,4).setText('.5')
     assert vertex.corner.length_mm==.5 and vertex.corner.angle_deg==45
     before=editor.profile.to_dict(); editor.preview.setChecked(True)
     assert not editor.view.mirror_item.path().isEmpty() and editor.profile.to_dict()==before
@@ -136,7 +137,7 @@ def test_shared_definition_edit_undo_and_old_clipboard(qapp,tmp_path):
     def edit_cavity():
         editor=w.findChild(CavityEditor)
         editor.view.point_items[editor.profile.vertices[-1].id].setSelected(True)
-        editor.z.setValue(29.125); editor.submit()
+        editor.points.item(len(editor.profile.vertices)-1,1).setText('29.125'); editor.submit()
     QTimer.singleShot(0,edit_cavity); w.edit_definition_cavity(definition.id)
     assert w.project.definitions[definition.id].physical.cavity_profile.vertices[-1].z==29.125
     assert all(w.project.instances[i].definition_id==definition.id for i in instance_ids)

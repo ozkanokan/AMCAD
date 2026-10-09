@@ -25,6 +25,7 @@ class CavitySurfaceView(QWidget):
     def __init__(self,label,parent=None):
         super().__init__(parent)
         self.label=label; self.profile=None; self.surface=None; self.interfaces=[]; self.channels={}
+        self.interface_labels={}
         self.selected_port=None; self.place_mode=False
         a,e=math.radians(-35),math.radians(30)
         right=(math.cos(a),-math.sin(a),0)
@@ -146,7 +147,7 @@ class CavitySurfaceView(QWidget):
             except ValueError: continue
             painter.setPen(QPen(QColor('#ffa828' if interface.id==self.selected_port else '#b27732'),2))
             painter.drawEllipse(p,4,4)
-            painter.setPen(foreground); painter.drawText(p+QPointF(7,-6),interface.hydraulic_port_id)
+            painter.setPen(foreground); painter.drawText(p+QPointF(7,-6),self.interface_labels.get(interface.id,interface.hydraulic_port_id))
         origin,_=self.project((0,0,0))
         for name,axis,color in [('X',(1,0,0),'#d66a68'),('Y',(0,1,0),'#53a271'),('Z',(0,0,1),'#578fd0')]:
             endpoint,_=self.project(tuple(3*v for v in axis))

@@ -1,9 +1,10 @@
 # V1.4a cavity profile contract
 
-`ComponentDefinition.physical` contains `cavity_type` (NONE or REVOLVED_PROFILE),
-`cavity_profile` and `hydraulic_interfaces`. NONE has no profile or interfaces.
-Existing files without this block load as NONE. Project and graph schema 5 embed
-one definition per definition ID; instances retain only their definition reference.
+Independent `CavityDefinition` records own profile geometry and hydraulic interfaces.
+Component instances reference them and map schematic ports separately. Project/graph
+schema 6 includes snapshots for portability. The retained `ComponentDefinition.physical`
+field is a legacy archive only; missing legacy blocks load as NONE. See
+[cavity-library.md](cavity-library.md) for ownership, revision and migration rules.
 
 A profile has a persistent `id`, `schema_version: 1`, `units: "mm"`, ordered
 `vertices` and the fixed datum:
@@ -75,7 +76,7 @@ Each marker has a persistent `id`, `hydraulic_port_id`, `interface_type`, `z_mm`
 nullable `r_mm`, `nominal_connection_diameter_mm` and `preferred_direction`.
 Legacy types are AXIAL/RADIAL; directions are AXIAL_POSITIVE, AXIAL_NEGATIVE, RADIAL or
 UNSPECIFIED. Coordinates are finite, supplied Y is nonnegative, diameter is positive.
-The port ID must exist in the schematic definition. V1.3 allows one marker per
+In legacy V1.3 data, the port ID must exist in the schematic definition. V1.3 allows one marker per
 port and rejects duplicate IDs/mappings. Missing required-port mappings warn but
 do not block saving a valid profile. NONE definitions need no mappings.
 
@@ -120,3 +121,7 @@ Legacy off-axis data is not rewritten on load. The explicit endpoint-correction
 action changes only the endpoint Y values after checking existing treatments;
 users inspect the result before saving. General project validation remains legacy
 compatible; strict finished-cavity validation is used by the cavity editor.
+
+V1.5 independent interfaces use their own persistent marker ID in the retained
+`hydraulic_port_id` serializer field. Component-instance mappings associate schematic
+port IDs with these interface IDs; geometry never depends on schematic names.

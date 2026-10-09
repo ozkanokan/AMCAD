@@ -162,7 +162,7 @@ def test_legacy_pose_preserved_and_new_surface_library_project_json_roundtrip(tm
     assert physical.cavity_profile.to_dict()==p.to_dict()
     assert channel_mesh(physical.cavity_profile,physical.hydraulic_interfaces[0]).vertices==mesh.vertices
     data=json.loads((tmp_path/'p.json').read_text())
-    assert data['schema_version']==5
+    assert data['schema_version']==6
     assert all('physical' not in instance for instance in data['component_instances'])
     assert 'triangles' not in json.dumps(data) and 'mesh' not in json.dumps(data)
     assert len(data['component_definitions'])==1

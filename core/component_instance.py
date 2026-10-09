@@ -10,3 +10,5 @@ class ComponentInstance:
     y: float = 0
     rotation: int = 0
     id: str = field(default_factory=new_id)
+    cavity_ref: str | None = None
+    port_mapping: dict[str,str] = field(default_factory=dict)

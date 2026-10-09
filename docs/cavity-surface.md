@@ -2,8 +2,8 @@
 
 The existing profile version 1 remains authoritative: original Z/r vertices, UUIDs,
 parametric corner features and fixed Z=0/Y=0 datum. Project/graph version 5 introduces
-optional hydraulic-interface fields; versions 1–4 still load. Definitions are shared
-by instances, including all cavity and port data. No visualization mesh is serialized.
+optional hydraulic-interface fields; versions 1–4 still load. V1.5 separates cavity definitions from schematic definitions; instance references
+and port mappings are persisted in project/graph schema 6 alongside portable snapshots. No visualization mesh is serialized.
 
 ## Revolved coordinates and anchors
 
@@ -46,7 +46,9 @@ transient pick data, derived XYZ and camera state are presentation-only.
 
 ## Channel definition and local frame
 
-Each `HydraulicInterface` retains its ID, schematic `hydraulic_port_id`, legacy
+Each `HydraulicInterface` retains its ID and legacy serializer fields. In independent
+V1.5 cavities, `hydraulic_port_id` equals its own ID, while instance mapping holds the
+schematic association. Legacy embedded records retain schematic IDs and legacy
 coordinate/type/direction/nominal-diameter fields, and adds:
 
 | Field | Meaning |

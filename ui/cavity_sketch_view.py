@@ -151,8 +151,9 @@ class CavitySketchView(QGraphicsView):
     AXIS_LABEL = 'Revolve axis: Y = 0; Z → (mm)'
     DATUM_LABEL = 'YZ • Z=0 mounting face; Y ↑ (mm)'
 
-    def __init__(self, profile, interfaces):
+    def __init__(self, profile, interfaces, interface_labels=None):
         super().__init__()
+        self.interface_labels=interface_labels if interface_labels is not None else {}
         self.profile = profile
         self.interfaces = interfaces
         self.lock_endpoints = False
@@ -300,7 +301,7 @@ class CavitySketchView(QGraphicsView):
             self.scene().addItem(marker)
             channel=QGraphicsPathItem(); channel.setPen(QPen(Qt.NoPen)); channel.setAcceptedMouseButtons(Qt.NoButton)
             channel.setZValue(-1); self.scene().addItem(channel); self.channel_items[interface.id]=channel
-            text = self.scene().addSimpleText(f'{interface.hydraulic_port_id} ({interface.interface_type})')
+            text = self.scene().addSimpleText(self.interface_labels.get(interface.id,f'{interface.hydraulic_port_id} ({interface.interface_type})'))
             self.marker_labels[interface.id]=text
             text.setFlag(QGraphicsItem.ItemIgnoresTransformations)
             text.setPos(interface.z_mm + .5, -(interface.r_mm or 0) - .5)

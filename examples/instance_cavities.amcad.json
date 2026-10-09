@@ -1,0 +1,363 @@
+{
+  "schema": "amcad.project",
+  "schema_version": 6,
+  "project": {
+    "id": "1ac53294-150a-40ee-8ff3-04f00ce68f47",
+    "name": "Independent R and RET cavity assignment"
+  },
+  "component_definitions": [
+    {
+      "id": "external-port",
+      "name": "External Port",
+      "prefix": "EXT",
+      "category": "Interfaces",
+      "ports": [
+        {
+          "id": "port",
+          "display_name": "Port",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "RIGHT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        }
+      ],
+      "symbol": {
+        "kind": "external",
+        "width": 40,
+        "height": 40
+      },
+      "internal_relationships": [],
+      "component_cad_path": null,
+      "cavity_cad_path": null,
+      "keepout_cad_path": null,
+      "physical": {
+        "cavity_type": "NONE",
+        "cavity_profile": null,
+        "hydraulic_interfaces": []
+      }
+    }
+  ],
+  "cavity_definitions": [
+    {
+      "schema": "amcad.cavity",
+      "schema_version": 1,
+      "name": "CAVITY_A",
+      "profile": {
+        "vertices": [
+          {
+            "z": 0,
+            "r": 0,
+            "id": "e776bff6-689f-4674-a477-5565627ff131",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 8,
+            "r": 7,
+            "id": "da2d3661-86fa-48d6-9587-d7fa460a4984",
+            "corner": {
+              "type": "FILLET",
+              "radius_mm": 0.5,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 8,
+            "r": 5,
+            "id": "bec9f156-e821-4c27-9fea-370faff5a2c2",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 20,
+            "r": 5,
+            "id": "b2933671-9697-4c53-aa16-a19798575a64",
+            "corner": {
+              "type": "CHAMFER",
+              "radius_mm": null,
+              "length_mm": 0.4,
+              "angle_deg": 45
+            }
+          },
+          {
+            "z": 20,
+            "r": 3,
+            "id": "f24a9027-411b-4cc2-8c3e-a27c1a5e9468",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 28,
+            "r": 0,
+            "id": "07a56ba2-54b6-456b-812a-eb51f044f68f",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          }
+        ],
+        "id": "71442017-b770-4664-a7fc-4b40a80d1087",
+        "schema_version": 1,
+        "units": "mm",
+        "datum": {
+          "mounting_face_z_mm": 0,
+          "positive_z": "DEPTH_INTO_MANIFOLD",
+          "revolve_axis_r_mm": 0
+        }
+      },
+      "interfaces": [
+        {
+          "hydraulic_port_id": "f5cdbf16-e14d-4c45-8e1c-bdfb0a1b2b74",
+          "interface_type": "SURFACE",
+          "z_mm": 26.4,
+          "r_mm": 0.5999999999999996,
+          "nominal_connection_diameter_mm": 4,
+          "preferred_direction": "AXIAL_POSITIVE",
+          "id": "f5cdbf16-e14d-4c45-8e1c-bdfb0a1b2b74",
+          "surface_anchor": {
+            "kind": "LINE",
+            "vertex_id": "f24a9027-411b-4cc2-8c3e-a27c1a5e9468",
+            "next_vertex_id": "07a56ba2-54b6-456b-812a-eb51f044f68f",
+            "t": 0.8,
+            "angle_deg": 0
+          },
+          "direction": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "section": {
+            "type": "CIRCLE",
+            "diameter_mm": 4,
+            "width_mm": 4,
+            "length_mm": 8,
+            "height_mm": 4
+          },
+          "section_rotation_deg": 0,
+          "preview_length_mm": 2,
+          "preview_mode": "CENTERED"
+        }
+      ],
+      "id": "73c0160f-876f-401e-b36c-4a7a06772bf6",
+      "revision": 1,
+      "geometry_type": "REVOLVED_PROFILE",
+      "description": "Independent one-interface engineering example",
+      "port_count": 1
+    },
+    {
+      "schema": "amcad.cavity",
+      "schema_version": 1,
+      "name": "CAVITY_B",
+      "profile": {
+        "vertices": [
+          {
+            "z": 0,
+            "r": 0,
+            "id": "e2aa2ea5-b382-45b5-b604-490f05b23164",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 8,
+            "r": 7,
+            "id": "31a28d64-1405-43f2-87da-9e246585253b",
+            "corner": {
+              "type": "FILLET",
+              "radius_mm": 0.5,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 8,
+            "r": 5,
+            "id": "8d38619c-b0ad-4838-8345-d7735432e39f",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 20,
+            "r": 5,
+            "id": "217153e8-3010-40ac-84d7-6e26bf5e3e93",
+            "corner": {
+              "type": "CHAMFER",
+              "radius_mm": null,
+              "length_mm": 0.4,
+              "angle_deg": 45
+            }
+          },
+          {
+            "z": 20,
+            "r": 3,
+            "id": "01803326-a51f-4add-91b5-f7eaed6530a8",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 30,
+            "r": 0,
+            "id": "15979aa5-3399-43ab-9f61-d1deb98f29c8",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          }
+        ],
+        "id": "bdcd6179-7bbc-4ed8-87ca-59f781f36849",
+        "schema_version": 1,
+        "units": "mm",
+        "datum": {
+          "mounting_face_z_mm": 0,
+          "positive_z": "DEPTH_INTO_MANIFOLD",
+          "revolve_axis_r_mm": 0
+        }
+      },
+      "interfaces": [
+        {
+          "hydraulic_port_id": "85261d18-fb39-4eaa-a16f-9cb349b01a8a",
+          "interface_type": "SURFACE",
+          "z_mm": 26.4,
+          "r_mm": 0.5999999999999996,
+          "nominal_connection_diameter_mm": 4,
+          "preferred_direction": "AXIAL_POSITIVE",
+          "id": "85261d18-fb39-4eaa-a16f-9cb349b01a8a",
+          "surface_anchor": {
+            "kind": "LINE",
+            "vertex_id": "01803326-a51f-4add-91b5-f7eaed6530a8",
+            "next_vertex_id": "15979aa5-3399-43ab-9f61-d1deb98f29c8",
+            "t": 0.8,
+            "angle_deg": 0
+          },
+          "direction": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "section": {
+            "type": "CIRCLE",
+            "diameter_mm": 4,
+            "width_mm": 4,
+            "length_mm": 8,
+            "height_mm": 4
+          },
+          "section_rotation_deg": 0,
+          "preview_length_mm": 2,
+          "preview_mode": "CENTERED"
+        }
+      ],
+      "id": "47d8b193-ff06-447f-8e2a-8b3962df7f0c",
+      "revision": 1,
+      "geometry_type": "REVOLVED_PROFILE",
+      "description": "Independent one-interface engineering example",
+      "port_count": 1
+    }
+  ],
+  "component_instances": [
+    {
+      "definition_id": "external-port",
+      "name": "R",
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "id": "ee58f7f9-d307-4ded-af6a-5de2a96fe446",
+      "cavity_ref": "73c0160f-876f-401e-b36c-4a7a06772bf6",
+      "port_mapping": {
+        "port": "f5cdbf16-e14d-4c45-8e1c-bdfb0a1b2b74"
+      }
+    },
+    {
+      "definition_id": "external-port",
+      "name": "RET",
+      "x": 300,
+      "y": 0,
+      "rotation": 0,
+      "id": "e6a2f648-861f-454c-ab7c-207faaa22aa7",
+      "cavity_ref": "47d8b193-ff06-447f-8e2a-8b3962df7f0c",
+      "port_mapping": {
+        "port": "85261d18-fb39-4eaa-a16f-9cb349b01a8a"
+      }
+    }
+  ],
+  "nodes": [
+    {
+      "id": "f60d4945-7590-45b3-8d03-050c70cb6824",
+      "instance_id": "ee58f7f9-d307-4ded-af6a-5de2a96fe446",
+      "port_id": "port",
+      "kind": "external_port"
+    },
+    {
+      "id": "8b357052-d29a-463e-8af8-eea22064a50e",
+      "instance_id": "e6a2f648-861f-454c-ab7c-207faaa22aa7",
+      "port_id": "port",
+      "kind": "external_port"
+    }
+  ],
+  "connections": [
+    {
+      "from_node_id": "f60d4945-7590-45b3-8d03-050c70cb6824",
+      "to_node_id": "8b357052-d29a-463e-8af8-eea22064a50e",
+      "id": "05a1fd50-efa9-4d02-b86e-90bf78b40d9e",
+      "from_component_instance_id": "ee58f7f9-d307-4ded-af6a-5de2a96fe446",
+      "from_port_id": "port",
+      "to_component_instance_id": "e6a2f648-861f-454c-ab7c-207faaa22aa7",
+      "to_port_id": "port",
+      "schematic_geometry": {
+        "points": [
+          [
+            20.0,
+            0.0
+          ],
+          [
+            40.0,
+            0.0
+          ],
+          [
+            350.0,
+            0.0
+          ],
+          [
+            340.0,
+            0.0
+          ],
+          [
+            320.0,
+            0.0
+          ]
+        ],
+        "controls": []
+      }
+    }
+  ],
+  "junctions": []
+}

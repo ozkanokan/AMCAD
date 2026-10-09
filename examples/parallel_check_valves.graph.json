@@ -1,6 +1,6 @@
 {
   "schema": "amcad.hydraulic_graph",
-  "schema_version": 5,
+  "schema_version": 6,
   "component_definitions": [
     {
       "id": "external-port",
@@ -254,6 +254,7 @@
       }
     }
   ],
+  "cavity_definitions": [],
   "project": {
     "id": "91322262-c1a9-4c03-a7bf-c3b0f0b888e9",
     "name": "Illustrative parallel Check Valve physical demonstrator"
@@ -263,37 +264,49 @@
       "id": "b2c72f05-644e-4068-96a8-5314a0c98791",
       "name": "IN",
       "definition_id": "external-port",
-      "definition_name": "External Port"
+      "definition_name": "External Port",
+      "cavity_ref": null,
+      "port_mapping": {}
     },
     {
       "id": "eb8e4815-68a4-464c-bc9b-15b8d940c737",
       "name": "J1",
       "definition_id": "junction-3",
-      "definition_name": "3-Way Junction"
+      "definition_name": "3-Way Junction",
+      "cavity_ref": null,
+      "port_mapping": {}
     },
     {
       "id": "088ab948-0394-4370-8c53-15d34c27ca60",
       "name": "CV1",
       "definition_id": "illustrative-check-valve",
-      "definition_name": "Illustrative Check Valve"
+      "definition_name": "Illustrative Check Valve",
+      "cavity_ref": null,
+      "port_mapping": {}
     },
     {
       "id": "3451e9d1-7f7b-4bb9-9ef3-bd7706cdb5d3",
       "name": "CV2",
       "definition_id": "illustrative-check-valve",
-      "definition_name": "Illustrative Check Valve"
+      "definition_name": "Illustrative Check Valve",
+      "cavity_ref": null,
+      "port_mapping": {}
     },
     {
       "id": "3d6e45fd-4c69-4ce3-8657-d6e4421d913f",
       "name": "OUT1",
       "definition_id": "external-port",
-      "definition_name": "External Port"
+      "definition_name": "External Port",
+      "cavity_ref": null,
+      "port_mapping": {}
     },
     {
       "id": "f611ea04-6a37-48d0-8bbc-95ebdacb3f7a",
       "name": "OUT2",
       "definition_id": "external-port",
-      "definition_name": "External Port"
+      "definition_name": "External Port",
+      "cavity_ref": null,
+      "port_mapping": {}
     }
   ],
   "nodes": [

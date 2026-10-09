@@ -110,47 +110,13 @@ def test_wizard_integrates_cavity_and_library_reopen(qapp,tmp_path):
         wizard.ports.setItem(row,0,QTableWidgetItem(port_id)); wizard.ports.setItem(row,1,QTableWidgetItem(port_id))
     wizard.add_relationship()
     for col,text in enumerate(['IN','OUT','CHECK_VALVE']): wizard.relationships.setItem(0,col,QTableWidgetItem(text))
-    def fill_editor():
-        editor=wizard.findChild(CavityEditor)
-        sample=check_valve_definition().physical
-        editor.profile.vertices=deepcopy(sample.cavity_profile.vertices)
-        editor.interfaces.extend(deepcopy(sample.hydraulic_interfaces))
-        editor.correct_endpoints(); editor.view.rebuild(); editor.profile_changed(); editor.submit()
-    QTimer.singleShot(0,fill_editor); wizard.edit_cavity(); wizard.submit()
-    assert wizard.result()==QDialog.Accepted and wizard.definition.physical.cavity_type=='REVOLVED_PROFILE'
-    library=ComponentLibrary(tmp_path/'library'); library.save(wizard.definition)
+    wizard.submit()
+    assert wizard.result()==QDialog.Accepted and wizard.definition.physical.cavity_type=='NONE'
+    assert not hasattr(wizard,'edit_cavity')
+    library=ComponentLibrary(tmp_path/'library');library.save(wizard.definition)
     loaded=ComponentLibrary(tmp_path/'library').definitions[wizard.definition.id]
     assert loaded.to_dict()==wizard.definition.to_dict()
-    reopen=CavityEditor(loaded.ports,loaded.physical); reopen.show(); qapp.processEvents()
-    assert reopen.validity.text()=='VALID'
-    assert reopen.profile.to_dict()==loaded.physical.cavity_profile.to_dict()
-    assert len(reopen.interfaces)==2; reopen.reject()
-
-
-def test_shared_definition_edit_undo_and_old_clipboard(qapp,tmp_path):
-    definition=check_valve_definition()
-    w=MainWindow(tmp_path/'library'); w.library.save(definition); w.refresh_library()
-    w.place(definition.id,-100,0); w.place(definition.id,100,0)
-    instance_ids=list(w.project.instances); original=deepcopy(w.project.definitions[definition.id].physical)
-    clipboard=w.project.copy_subgraph(instance_ids)
-    def edit_cavity():
-        editor=w.findChild(CavityEditor)
-        editor.correct_endpoints()
-        editor.view.point_items[editor.profile.vertices[-1].id].setSelected(True)
-        editor.points.item(len(editor.profile.vertices)-1,1).setText('29.125'); editor.submit()
-    QTimer.singleShot(0,edit_cavity); w.edit_definition_cavity(definition.id)
-    assert w.project.definitions[definition.id].physical.cavity_profile.vertices[-1].z==29.125
-    assert all(w.project.instances[i].definition_id==definition.id for i in instance_ids)
-    assert ComponentLibrary(tmp_path/'library').definitions[definition.id].physical.cavity_profile.vertices[-1].z==29.125
-    w.undo(); assert w.project.definitions[definition.id].physical==original
-    w.redo(); updated=deepcopy(w.project.definitions[definition.id].physical)
-    added=w.project.paste_subgraph(clipboard)
-    assert all(w.project.instances[i].definition_id==definition.id for i in added)
-    assert len(w.project.definitions)==1 and w.project.definitions[definition.id].physical==updated
-    w.save_to(tmp_path/'shared.json'); expected=w.project.to_dict(); w.close()
-    reopened=MainWindow(tmp_path/'library'); reopened.load_path(tmp_path/'shared.json')
-    assert reopened.project.to_dict()==expected
-    reopened.close()
+    assert len(loaded.ports)==2 and loaded.internal_relationships==wizard.definition.internal_relationships
 
 
 def test_physical_demo_launch_graph_and_existing_c1_r_preserved(qapp,tmp_path):
@@ -163,7 +129,7 @@ def test_physical_demo_launch_graph_and_existing_c1_r_preserved(qapp,tmp_path):
     assert definition.physical.cavity_type=='REVOLVED_PROFILE'
     assert {i.hydraulic_port_id for i in definition.physical.hydraulic_interfaces}=={'IN','OUT'}
     assert all(p.is_complete(i.id) for i in p.instances.values())
-    assert p.to_dict()['schema_version']==5
+    assert p.to_dict()['schema_version']==6
     assert export_graph(p)==json.loads((ROOT/'examples/parallel_check_valves.graph.json').read_text())
     assert sum(d['physical']['cavity_type']=='REVOLVED_PROFILE' for d in export_graph(p)['component_definitions'])==1
     w=MainWindow(tmp_path/'library'); w.load_path(demo); w.show(); qapp.processEvents()

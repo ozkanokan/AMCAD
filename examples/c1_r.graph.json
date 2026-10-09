@@ -1,6 +1,6 @@
 {
   "schema": "amcad.hydraulic_graph",
-  "schema_version": 5,
+  "schema_version": 6,
   "component_definitions": [
     {
       "id": "external-port",
@@ -208,6 +208,7 @@
       }
     }
   ],
+  "cavity_definitions": [],
   "project": {
     "id": "05bdc326-4c2d-429c-84d5-a7c6808e71f3",
     "name": "C1\u2013R hydraulic architecture"
@@ -217,37 +218,49 @@
       "id": "3069fb0a-6d17-4cbf-99c0-26d4b32262bd",
       "name": "C1",
       "definition_id": "external-port",
-      "definition_name": "External Port"
+      "definition_name": "External Port",
+      "cavity_ref": null,
+      "port_mapping": {}
     },
     {
       "id": "bbe023dc-5c42-4985-8563-b3ddfc8985bb",
       "name": "R",
       "definition_id": "external-port",
-      "definition_name": "External Port"
+      "definition_name": "External Port",
+      "cavity_ref": null,
+      "port_mapping": {}
     },
     {
       "id": "3d164ce9-37f0-43b2-8235-ea0ffc9a5765",
       "name": "EHSV1",
       "definition_id": "demo-ehsv",
-      "definition_name": "EHSV"
+      "definition_name": "EHSV",
+      "cavity_ref": null,
+      "port_mapping": {}
     },
     {
       "id": "47090898-8e3a-45e0-b4d1-59ab2af9981e",
       "name": "RV1",
       "definition_id": "demo-relief",
-      "definition_name": "Relief Valve"
+      "definition_name": "Relief Valve",
+      "cavity_ref": null,
+      "port_mapping": {}
     },
     {
       "id": "fd0d6ff1-9a72-48d4-9cdd-f01bc081e15d",
       "name": "J1",
       "definition_id": "junction-3",
-      "definition_name": "3-Way Junction"
+      "definition_name": "3-Way Junction",
+      "cavity_ref": null,
+      "port_mapping": {}
     },
     {
       "id": "d27eacea-8aed-42a1-9c49-e6bbdbeceafe",
       "name": "J2",
       "definition_id": "junction-3",
-      "definition_name": "3-Way Junction"
+      "definition_name": "3-Way Junction",
+      "cavity_ref": null,
+      "port_mapping": {}
     }
   ],
   "nodes": [

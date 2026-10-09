@@ -7,17 +7,21 @@ from PySide6.QtCore import Qt
 from core.project import Project
 from core.history import ProjectHistory
 from core.library import ComponentLibrary
+from core.cavity_library import CavityLibrary
 from core.graph import save_graph
 from ui.component_library import ComponentLibraryPanel
 from ui.schematic_view import SchematicView
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, library_directory=None):
+    def __init__(self, library_directory=None, cavity_library_directory=None):
         super().__init__()
         self.project = Project()
         self.history = ProjectHistory(self.project)
         self.library = ComponentLibrary(library_directory)
+        # Explicit component-library locations isolate cavity data too (tests/portable installs).
+        cavity_path=cavity_library_directory if cavity_library_directory is not None else Path(library_directory).parent/'cavities' if library_directory is not None else None
+        self.cavity_library=CavityLibrary(cavity_path)
         self.path = None
         self.clipboard_data = None
         self.paste_count = 0
@@ -42,6 +46,7 @@ class MainWindow(QMainWindow):
         file_menu = self.menuBar().addMenu('&File')
         edit_menu = self.menuBar().addMenu('&Edit')
         component_menu = self.menuBar().addMenu('&Component')
+        cavity_menu=self.menuBar().addMenu('&Cavity')
         view_menu = self.menuBar().addMenu('&View')
         toolbar = self.addToolBar('Editing'); toolbar.setMovable(False)
         for menu, key, label, shortcut, callback in [
@@ -58,11 +63,13 @@ class MainWindow(QMainWindow):
             (edit_menu,'delete_line','Delete Line',None,self.delete_lines),
             (edit_menu,'select_all','Select All',QKeySequence.SelectAll,self.select_all),
             (component_menu,'create','New Component…','Ctrl+Shift+N',self.new_component),
-            (component_menu,'cavity','Edit Definition Cavity…','Ctrl+Shift+C',self.selected_cavity),
+            (component_menu,'cavity','Assign Cavity…','Ctrl+Shift+C',self.assign_cavity),
             (component_menu,'rename','Properties / Rename…','F2',self.selected_properties),
             (component_menu,'rotate','Rotate 90°','Ctrl+R',self.rotate_selection),
             (component_menu,'junction','Add 3-Way Junction','Ctrl+J',self.add_junction),
             (component_menu,'junction4','Add 4-Way Junction','Ctrl+Shift+J',lambda:self.add_junction(4)),
+            (cavity_menu,'cavity_library','Cavity Library…',None,self.open_cavity_library),
+            (cavity_menu,'new_cavity','New Cavity…',None,self.new_cavity),
             (view_menu,'fit','Fit Schematic','F',self.view.fit_content),
             (view_menu,'zoom_in','Zoom In','Ctrl++',lambda:self.view.zoom(1.15)),
             (view_menu,'zoom_out','Zoom Out','Ctrl+-',lambda:self.view.zoom(1/1.15)),
@@ -70,12 +77,13 @@ class MainWindow(QMainWindow):
             action = QAction(label,self)
             if shortcut is not None: action.setShortcut(shortcut)
             action.triggered.connect(callback); menu.addAction(action); self.actions[key]=action
-            if key in {'save','undo','redo','delete','rotate','junction','fit'}: toolbar.addAction(action)
+            if key in {'save','undo','redo','delete','rotate','junction','fit','cavity_library'}: toolbar.addAction(action)
         self.refresh_library()
         self.update_title()
         self.statusBar().showMessage('Drag components • click a free port to draw a line • middle-drag to pan • wheel to zoom')
-        if self.library.errors:
-            self.statusBar().showMessage('Some library files could not be loaded: '+'; '.join(self.library.errors))
+        errors=self.library.errors+self.cavity_library.errors
+        if errors:
+            self.statusBar().showMessage('Some library files could not be loaded: '+'; '.join(errors))
 
     def refresh_library(self):
         self.available_definitions = dict(self.library.definitions)
@@ -179,8 +187,10 @@ class MainWindow(QMainWindow):
         form.addRow('Definition',QLabel(self.project.definitions[instance.definition_id].name))
         form.addRow('Persistent ID',QLabel(instance.id))
         form.addRow('Name',name); form.addRow('Rotation (degrees)',rotation)
-        cavity=QPushButton('Edit Definition Cavity…')
-        cavity.clicked.connect(lambda:self.edit_definition_cavity(instance.definition_id))
+        cavity=QPushButton('Assign Cavity…')
+        cavity.clicked.connect(lambda:self.assign_cavity(instance_id))
+        assigned=self.project.cavities.get(instance.cavity_ref)
+        form.addRow('Cavity',QLabel(assigned.name+' · '+self.cavity_library.status(self.project,assigned.id) if assigned else 'Unassigned'+(' · legacy embedded data available for import' if self.project.definitions[instance.definition_id].physical.cavity_type!='NONE' else '')))
         form.addRow(cavity)
         for node in self.project.nodes.values():
             if node.instance_id==instance_id:
@@ -196,40 +206,46 @@ class MainWindow(QMainWindow):
         buttons.accepted.connect(apply)
         dialog.exec()
 
-    def selected_cavity(self):
-        ids=self.view.selected_instances()
-        if ids:
-            definitions={self.project.instances[i].definition_id for i in ids}
-            if len(definitions)!=1:
-                self.statusBar().showMessage('Select instances of one definition to edit their shared cavity'); return
-            definition_id=next(iter(definitions))
-        elif self.library_panel.currentItem():
-            definition_id=self.library_panel.currentItem().data(Qt.UserRole)
-        else:
-            self.statusBar().showMessage('Select a component or library definition'); return
-        self.edit_definition_cavity(definition_id)
+    def open_cavity_library(self):
+        from ui.cavity_library import CavityLibraryDialog
+        CavityLibraryDialog(self).exec()
 
-    def edit_definition_cavity(self, definition_id):
-        from copy import deepcopy
+    def assign_cavity(self,instance_id=None):
+        from ui.cavity_library import CavityLibraryDialog
+        if instance_id is None or isinstance(instance_id,bool):
+            ids=self.view.selected_instances()
+            if len(ids)!=1:self.statusBar().showMessage('Select one component instance to assign a cavity');return
+            instance_id=ids[0]
+        CavityLibraryDialog(self,instance_id).exec()
+
+    def new_cavity(self):
         from ui.cavity_editor import CavityEditor
-        definition=self.available_definitions[definition_id]
-        dialog=CavityEditor(definition.ports,definition.physical,self)
-        if dialog.exec()!=QDialog.Accepted: return
-        updated=deepcopy(definition); updated.physical=dialog.result_physical
-        try:
-            updated.validate()
-            # Update custom library definitions; built-ins remain generic templates.
-            if self.library.is_custom(definition_id): self.library.update(updated)
-            if definition_id in self.project.definitions:
-                self.project.definitions[definition_id]=updated
-                self.record_change(); self.refresh_library()
-            elif not self.library.is_custom(definition_id):
-                from core.port import new_id
-                updated.id=new_id(); updated.name+=' (Cavity)'
-                self.library.save(updated); self.refresh_library()
-            else: self.refresh_library()
-            self.statusBar().showMessage('Cavity updated on the reusable definition; instances share one profile')
-        except (ValueError,OSError) as error: self.error(error)
+        dialog=CavityEditor(parent=self,cavity_library=self.cavity_library,save_callback=self.save_library_cavity)
+        if dialog.exec()==QDialog.Accepted:
+            self.statusBar().showMessage('Saved independent cavity '+dialog.result_cavity.name)
+            return dialog.result_cavity
+
+    def edit_cavity(self,cavity_id):
+        from ui.cavity_editor import CavityEditor
+        cavity=self.cavity_library.definitions.get(cavity_id) or self.project.cavities.get(cavity_id)
+        if cavity is None:self.statusBar().showMessage('Cavity reference is missing');return
+        dialog=CavityEditor(parent=self,cavity_definition=cavity,cavity_library=self.cavity_library,save_callback=self.save_library_cavity)
+        usages=self.project.cavity_usage(cavity_id)
+        warning=self.cavity_library.status(self.project,cavity_id)
+        if len(usages)>1:warning+=' · Shared cavity: saving updates '+', '.join(i.name for i in usages)+'. Use Save As New for an independent copy.'
+        message=QLabel(warning);message.setWordWrap(True);dialog.layout().insertWidget(0,message)
+        if dialog.exec()==QDialog.Accepted:return dialog.result_cavity
+
+    def save_library_cavity(self,cavity):
+        from copy import deepcopy
+        if cavity.id in self.project.cavities and cavity.id not in self.cavity_library.definitions:
+            raise ValueError('Library reference is missing. Use Save As New to preserve this snapshot as an independent library cavity.')
+        # Confirm that interface changes cannot invalidate any active mapping before writing.
+        candidate=deepcopy(self.project);candidate.update_cavity(cavity)
+        saved=self.cavity_library.save(cavity)
+        self.project.update_cavity(saved);self.record_change()
+        self.statusBar().showMessage(f'Saved cavity {saved.name} · revision {saved.revision}')
+        return saved
 
     def new_component(self):
         from ui.node_wizard import NodeWizard

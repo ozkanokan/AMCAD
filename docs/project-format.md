@@ -1,7 +1,7 @@
-# V1.4 project and graph contracts
+# V1.5 project and graph contracts
 
 Formats are UTF-8 JSON with `schema` and integer `schema_version`. Current
-version is **5**. Version 1/2 projects migrate topology explicitly on load.
+version is **6**. Version 1/2 projects migrate topology explicitly on load.
 Version 4 physical profiles load unchanged; missing 3D interface fields use legacy
 fixed-position AXIAL/RADIAL interpretation. Anchored fields are documented in
 [cavity-surface.md](cavity-surface.md). Meshes are not persisted.
@@ -16,7 +16,8 @@ replacing the active project.
 | --- | --- |
 | `project` | Persistent project ID and name |
 | `component_definitions` | Embedded definitions |
-| `component_instances` | UUID, definition ID, name, x/y, clockwise quarter-turn rotation |
+| `component_instances` | UUID, definition ID, name, x/y, rotation, cavity_ref and port_mapping |
+| `cavity_definitions` | Portable snapshots of independent referenced cavity definitions |
 | `nodes` | UUID, instance UUID, definition-local port ID, kind |
 | `connections` | Logical references plus independent `schematic_geometry` |
 | `junctions` | Junction port-node UUID index consistent with nodes |
@@ -49,8 +50,9 @@ edits never modify logical endpoint references.
 
 Definitions have `id`, `name`, `prefix`, `category`, `symbol`, `ports`,
 `internal_relationships`, `physical` and nullable future CAD paths. The physical
-block stores NONE or REVOLVED_PROFILE, parametric profile vertices/corners/datum,
-and hydraulic interfaces referencing existing port IDs. See
+block retains archived legacy NONE or REVOLVED_PROFILE data. New component
+definitions carry NONE; authoritative new geometry lives in independent Cavity
+Definitions with instance-specific references and mappings. See
 [cavity-profile.md](cavity-profile.md). Instances never contain profile copies. Symbol kinds are `box`,
 `external`, `junction`. External interfaces have one port on their symbol's flat
 side. Junctions have three/four ports on distinct sides and a central filled dot
@@ -75,7 +77,8 @@ selection, preview, clipboard and undo history are session-only state.
 | --- | --- |
 | `project` | Project metadata |
 | `component_definitions` | Unique reusable definitions, including physical metadata |
-| `component_instances` | UUID/name and definition identity |
+| `component_instances` | UUID/name, definition identity, cavity_ref and port_mapping |
+| `cavity_definitions` | Referenced independent cavity snapshots |
 | `nodes` | UUID, instance/port identity, kind, label, type, direction, required flag |
 | `junctions` | Junction port-node UUIDs |
 | `junction_instances` | UUID/name, port-node IDs, capacity (3/4) |
@@ -113,3 +116,19 @@ automatically inserts junctions or branches on line clicks.
 The original project is preserved in `tests/fixtures/c1_r.v1.json`; the current
 sample in `examples/` uses explicit supply/return junctions, manual controls and
 crossing jumps without changing its historical hydraulic terminal nets.
+
+## V1.5 cavities and legacy archives
+
+`cavity_ref` is null for unassigned instances; their `port_mapping` is empty. Assigned
+instances reference a snapshot ID and map all definition-local schematic port IDs
+to unique cavity interface IDs. Snapshot schema is `amcad.cavity` version 1, with
+name/revision/type/profile/interfaces/description and a validated derived port count.
+Invalid assignments, missing snapshots and duplicate snapshot/interface IDs are
+rejected. Surface anchors and geometry are stored once per referenced cavity, never
+per instance. Routing nodes/edges are unchanged by cavity assignments.
+
+Old embedded cavity data is preserved when reading versions 1–5 and is not automatically
+assigned. Explicit per-instance import creates an idempotent independent library object
+without changing connectivity or instance IDs. See [cavity-library.md](cavity-library.md)
+for deterministic migration IDs, strict assignment validation, snapshot fallback, revision
+mismatches and safe library ownership. Loading snapshots never overwrites the library.

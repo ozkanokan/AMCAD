@@ -1,7 +1,8 @@
-# AMCAD — Hydraulic Manifold Schematic Editor (V1.4b)
+# AMCAD — Hydraulic Manifold Schematic Editor (V1.5)
 
 A standalone Python / PySide6 desktop editor for hydraulic schematics and their
-graph foundation. V1.4b refines the existing axisymmetric cavity sketcher with
+graph foundation. V1.5 adds an independent reusable Cavity Library and instance-specific
+assignments to the existing axisymmetric cavity sketcher, with
 synchronized YZ/XZ/XY/ISO views, surface-anchored hydraulic ports, arbitrary 3D
 channel directions and circle/slot/rectangle channel previews. The point table,
 Draw/Edit modes, parametric corners and engineering leaders remain available.
@@ -84,7 +85,7 @@ executable packaging have not been validated.
   geometry translated with the paste offset. IDs are fresh and names unique.
   Connections outside the selection are omitted; the clipboard is session-local.
 - Ctrl+Z / Ctrl+Shift+Z undo/redo schematic and line-geometry edits (100 states).
-  Definition creation in the persistent library is not part of schematic history.
+  Persistent component/cavity library writes are not part of schematic history.
 - Delete removes selected components and incident lines, or selected lines.
   Mouse wheel zooms, middle-button drag pans, and F fits the schematic.
 - File → Save/Open preserves components, positions, rotations and manual line
@@ -128,13 +129,15 @@ library files are reported in the status bar while valid files remain usable.
 
 ## Axisymmetric cavity sketcher
 
-In **+ New Component**, configure schematic port IDs first, then click **Cavity
-Profile…**. To edit an existing definition, select its placed component or library
-entry and choose **Component → Edit Definition Cavity…** (Ctrl+Shift+C), or use
-the component properties dialog. The cavity belongs to the reusable definition:
-all instances share one profile and the same schematic port identities.
+Use **Cavity → New Cavity…** without selecting a component. Name and Save the cavity
+in the independent library. **Cavity → Cavity Library…** manages reusable geometry.
+Select an individual placed instance and choose **Component → Assign Cavity…** or
+use its Properties dialog; compatible cavities require matching hydraulic-interface
+count and a complete one-to-one mapping. Multi-port mappings are explicitly selected.
+Component definitions own only schematic data; R and RET can use different cavities
+or intentionally share one. See [library architecture, migration and manual workflow](docs/cavity-library.md).
 
-- Choose NONE or REVOLVED_PROFILE. New cavities start with two axis endpoints in **Draw mode**;
+- Independent cavities use REVOLVED_PROFILE. New cavities start with two axis endpoints in **Draw mode**;
   populated profiles start in **Edit mode**. Draw or **Add Point** adds vertices before the final axis endpoint
   on empty canvas clicks, with a snapped live preview. Existing point clicks select
   without adding duplicates. Edit mode selects/drags points and never appends them.
@@ -159,9 +162,9 @@ all instances share one profile and the same schematic port identities.
   the selected vertex. Unaffected IDs and treatments survive append/insert/delete.
   Impossible treatment changes are rejected and the previous value is restored.
   Other draft errors show explicit INVALID feedback and block Save.
-- **Add Port — pick cavity surface** creates a generalized surface anchor mapped to
-  an existing schematic port ID. Edit its 3D direction and cross section. Duplicate
-  or nonexistent mappings are rejected; missing required mappings produce warnings.
+- **Add Port — pick cavity surface** creates an independently identified hydraulic interface.
+  The interface count is automatic. Edit its 3D direction and cross section; schematic
+  port association is stored separately on a component instance.
 - Markers are independently selectable; double-click one or choose **Edit Selected
   Interface** to edit it. Placement finishes cleanly and preserves Draw/Edit mode.
   The marker section can collapse to leave more room for the point table.
@@ -172,11 +175,12 @@ all instances share one profile and the same schematic port identities.
 - **Revolve Preview** mirrors the section around Y=0. It does not generate a solid.
   Save/reopen preserves exact vertices, UUIDs, corner parameters and interfaces.
 
-Accepting an edit to a placed definition updates the project and participates in
-project undo/redo. Existing custom-library definitions are also saved; library
-writes are independent of project history. Project-only definitions stay embedded.
-Editing a built-in library entry without a placed instance creates a custom copy.
-Cancel leaves the original definition untouched.
+Save updates the independent library ID and increments revision when content changes.
+**Save As New** and library **Duplicate** create independent IDs. Shared editing names
+all affected instances; incompatible interface changes are rejected. Project assignments
+and snapshots support undo/redo; persistent library writes remain outside project history.
+Cancel leaves the original untouched. Projects embed sufficient referenced cavity snapshots
+for portability; missing library entries and revision mismatches are shown explicitly.
 
 Existing V1.3 profiles keep their saved `z`/`r` fields and datum; `r` displays as Y.
 Dimension leaders and tangent points are derived and never become saved vertices.
@@ -198,7 +202,7 @@ or used to generate a CAD solid.
 2. Choose **Add Port — pick cavity surface**, then click a surface in ISO, XZ or XY.
    Picking records the persistent segment/feature, its along-feature parameter
    and circumferential angle. It initializes direction from the local wall normal.
-3. Assign an existing schematic port ID. Edit **dx/dy/dz**, cross section and
+3. Create an independently identified interface. Edit **dx/dy/dz**, cross section and
    section rotation. Direction is an **unoriented channel axis**: any nonzero vector
    is accepted and normalized, including inward and tangent vectors. Its sign is
    preserved; picking still initializes from the wall normal. Circle uses diameter, slot uses
@@ -212,7 +216,7 @@ or used to generate a CAD solid.
    it in all views. Double-click a port or use **Edit Selected Interface**. The
    dialog also allows changing its surface feature/parameter/angle explicitly.
 6. Save/reopen: anchors, normalized direction, section, rotation and preview length
-   persist on the reusable definition; meshes and resolved XYZ are recomputed.
+   persist on the independent cavity definition; meshes and resolved XYZ are recomputed.
 
 Wheel zooms in every pane. Middle drag pans YZ; middle/right drag pans the other
 panes. ISO left drag uses unrestricted quaternion trackball orbit around the view
@@ -244,18 +248,18 @@ its result and affected port anchors before Save. Schematic loading/export remai
 compatible, including these legacy profiles; strict cavity validation applies when
 saving cavity edits. See [surface/port format](docs/cavity-surface.md).
 
-For manual evaluation, open [the V1.4a example](examples/parallel_check_valves_v14a.amcad.json),
-select CV1, and choose **Component → Edit Definition Cavity…**. Resize/maximize, collapse
-each full-width panel header, edit Z and corner dimensions, then add a port on a
-picked surface. Try inward and tangential axes, verify their signs and centered
-previews, orbit to the opposite end, and save/reopen. CV1/CV2
-share one definition. The original V1.3/V1.4 examples remain available for compatibility
-checks and require explicit endpoint correction before saving cavity edits.
+For manual evaluation, follow [the V1.5 verification steps](docs/cavity-library.md#manual-verification)
+or open the portable [R/RET example](examples/instance_cavities.amcad.json). Each instance
+uses a different cavity while sharing the same schematic symbol. A missing-library
+status is expected until you save a snapshot as a new library cavity and explicitly
+assign that copy. Original check-valve examples remain untouched; import legacy data
+for a selected instance, explicitly correct off-axis endpoints, and reattach unresolved
+interfaces before assignment. Repeated imports do not create duplicate records.
 
 ```bash
-python -m app.main examples/parallel_check_valves_v14a.amcad.json
-QT_QPA_PLATFORM=offscreen python -m app.main examples/parallel_check_valves_v14a.amcad.json --smoke
-python -m examples.create_refined_surface_demo
+python -m app.main examples/instance_cavities.amcad.json
+QT_QPA_PLATFORM=offscreen python -m app.main examples/instance_cavities.amcad.json --smoke
+python -m examples.create_instance_cavity_demo
 ```
 
 These are software-rendered visualization meshes with finite tessellation and
@@ -312,7 +316,8 @@ UUIDs. Manual visual geometry is separate, under `schematic_geometry`, and is
 excluded from logical graph export. Junction ports share internal `JUNCTION`
 relationships, preserving the common hydraulic net without extra physical lines.
 
-Project/graph schema version **5** adds anchored 3D hydraulic-interface parameters.
+Project/graph schema version **6** adds independent cavity snapshots and instance
+references/mappings. Version 5 added anchored 3D hydraulic-interface parameters.
 Version 4 introduced definition-level physical data; version 3
 introduced manual geometry and required-port metadata. Version 3 loads without
 changing its manual geometry; missing physical data defaults to NONE.
@@ -324,3 +329,7 @@ does not rewrite the original file; explicit Save writes the current format.
 
 See [format contracts](docs/project-format.md). Unsupported versions and invalid
 geometry/occupancy are rejected. Line-click branching remains out of scope.
+
+Independent cavity JSON lives at `$AMCAD_CAVITY_LIBRARY` when configured, otherwise
+in the platform user-data `amcad/cavities` directory. The library manager shows its
+actual path; [storage details](docs/cavity-library.md#storage-and-identities) cover all platforms.

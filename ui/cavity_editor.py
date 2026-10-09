@@ -5,6 +5,8 @@ from PySide6.QtGui import QDoubleValidator, QColor, QPalette
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QWidget,
     QLabel, QPushButton, QComboBox, QDoubleSpinBox, QDialogButtonBox, QTableWidget,
     QTableWidgetItem, QHeaderView, QCheckBox, QStyledItemDelegate, QLineEdit, QGroupBox, QSplitter, QToolButton, QSizePolicy)
+from core.port import PortDefinition,new_id
+from core.cavity_definition import CavityDefinition
 from core.cavity import CavityProfile, ProfileVertex, Corner, PhysicalDefinition, HydraulicInterface
 from ui.cavity_sketch_view import CavitySketchView
 from core.cavity_surface import (SurfaceAnchor, ChannelSection, normalized, surface_patches,
@@ -80,11 +82,13 @@ class InterfaceDialog(QDialog):
         root=QVBoxLayout(self)
         def group(title):
             box=QGroupBox(title); form=QFormLayout(box); root.addWidget(box); return form
-        form=group('1. Schematic Port'); self.port=QComboBox()
+        independent=bool(getattr(parent,'independent',False))
+        form=group('1. Hydraulic Interface' if independent else '1. Schematic Port'); self.port=QComboBox()
         occupied={i.hydraulic_port_id for i in interfaces if marker is None or i.id!=marker.id}
-        self.port.addItems([p.id for p in ports if p.id not in occupied])
-        if marker: self.port.setCurrentText(marker.hydraulic_port_id)
-        form.addRow('Component port ID',self.port)
+        for p in ports:
+            if p.id not in occupied:self.port.addItem(p.display_name if independent else p.id,p.id)
+        if marker:self.port.setCurrentIndex(self.port.findData(marker.hydraulic_port_id))
+        form.addRow('Independent interface' if independent else 'Component port ID',self.port)
         form=group('2. Surface Anchor'); self.feature=QComboBox()
         self.feature.addItem('Unresolved legacy position — choose a surface explicitly',None)
         try: patches=surface_patches(profile) if profile else []
@@ -158,8 +162,11 @@ class InterfaceDialog(QDialog):
         super().done(result)
 
     def submit(self):
-        marker=deepcopy(self.marker) if self.marker else HydraulicInterface(self.port.currentText(),'SURFACE')
-        marker.hydraulic_port_id=self.port.currentText(); marker.surface_anchor=deepcopy(self.anchor)
+        port_id=self.port.currentData() or self.port.currentText()
+        marker=deepcopy(self.marker) if self.marker else HydraulicInterface(port_id,'SURFACE')
+        marker.hydraulic_port_id=port_id;
+        if getattr(self.parent(),'independent',False) and self.marker is None:marker.id=port_id
+        marker.surface_anchor=deepcopy(self.anchor)
         try:
             if not self.anchor and not self.marker: raise ValueError('New hydraulic interfaces require a surface anchor')
             vector=tuple(w.value() for w in self.vector)
@@ -183,13 +190,19 @@ class InterfaceDialog(QDialog):
 
 
 class CavityEditor(QDialog):
-    def __init__(self, ports, physical=None, parent=None):
+    def __init__(self, ports=None, physical=None, parent=None, cavity_definition=None, cavity_library=None, save_callback=None):
         super().__init__(parent)
+        self.independent=cavity_library is not None or cavity_definition is not None
+        self.cavity_library=cavity_library;self.save_callback=save_callback
+        self.cavity_definition=deepcopy(cavity_definition)
+        self.result_cavity=None
+        if self.cavity_definition is not None:
+            physical=self.cavity_definition.physical();ports=self.cavity_definition.editor_ports()
         self.setLocale(QLocale.c())
-        self.setWindowTitle('Cavity Profile — Four-view Surface Editor V1.4b')
+        self.setWindowTitle('Cavity Profile — Four-view Surface Editor V1.5')
         self.setWindowFlags(self.windowFlags()|Qt.WindowMaximizeButtonHint|Qt.WindowMinimizeButtonHint)
         self.resize(1500,900)
-        self.ports = deepcopy(ports)
+        self.ports = deepcopy(ports or [])
         self.physical = deepcopy(physical or PhysicalDefinition())
         self.profile = self.physical.cavity_profile or CavityProfile([ProfileVertex(0,0),ProfileVertex(10,0)])
         self.interfaces = self.physical.hydraulic_interfaces
@@ -199,16 +212,23 @@ class CavityEditor(QDialog):
         self.surface_place_mode = False
         self.updating = False
         root = QVBoxLayout(self)
+        if self.independent:
+            metadata=QFormLayout();self.cavity_name=QLineEdit(self.cavity_definition.name if self.cavity_definition else '')
+            self.cavity_description=QLineEdit(self.cavity_definition.description if self.cavity_definition else '')
+            metadata.addRow('Cavity name (required)',self.cavity_name);metadata.addRow('Description',self.cavity_description)
+            if self.cavity_definition:metadata.addRow('ID / revision',QLabel(f'{self.cavity_definition.id} / {self.cavity_definition.revision}'))
+            root.addLayout(metadata)
         heading = QHBoxLayout()
         self.cavity_type = QComboBox()
-        self.cavity_type.addItems(['REVOLVED_PROFILE', 'NONE'])
+        self.cavity_type.addItems(['REVOLVED_PROFILE'] if self.independent else ['REVOLVED_PROFILE', 'NONE'])
         heading.addWidget(QLabel('Cavity Type'))
         heading.addWidget(self.cavity_type)
         heading.addWidget(QLabel('Z → (mm) • Y ↑ (mm) • Z=0 mounting face • positive Z into manifold • Revolve axis: Y = 0'))
         heading.addStretch()
         root.addLayout(heading)
         body = QHBoxLayout()
-        self.view = CavitySketchView(self.profile, self.interfaces)
+        self.interface_labels={}
+        self.view = CavitySketchView(self.profile, self.interfaces,self.interface_labels)
         self.view.lock_endpoints=True
         self.surface_views = {label:CavitySurfaceView(label) for label in ('XZ','XY','ISO')}
         self.four_views = QSplitter(Qt.Vertical)
@@ -254,7 +274,7 @@ class CavityEditor(QDialog):
         marker_layout = QVBoxLayout(self.interface_contents)
         marker_layout.setContentsMargins(0, 0, 0, 0)
         self.markers = QTableWidget(0, 2)
-        self.markers.setHorizontalHeaderLabels(['Port ID', 'Type / Z (mm)'])
+        self.markers.setHorizontalHeaderLabels(['Interface' if self.independent else 'Port ID', 'Type / Z (mm)'])
         self.markers.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.markers.setMaximumHeight(125)
         self.markers.setSelectionBehavior(QTableWidget.SelectRows)
@@ -303,6 +323,9 @@ class CavityEditor(QDialog):
         root.addWidget(self.feedback)
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
         self.save_button=buttons.button(QDialogButtonBox.Save)
+        if self.independent:
+            save_new=buttons.addButton('Save As New',QDialogButtonBox.ActionRole)
+            save_new.clicked.connect(lambda:self.submit(save_as_new=True))
         buttons.accepted.connect(self.submit)
         buttons.rejected.connect(self.reject)
         root.addWidget(buttons)
@@ -336,10 +359,11 @@ class CavityEditor(QDialog):
             surface = revolved_surface(self.profile) if not self.profile.validation_errors(revolved=True) else None
         except ValueError: surface = None
         for preview in self.surface_views.values():
+            preview.interface_labels=self.interface_labels
             preview.set_geometry(self.profile,surface,self.interfaces,self.selected_port_id)
 
     def begin_surface_port(self):
-        if len(self.interfaces)>=len(self.ports):
+        if not self.independent and len(self.interfaces)>=len(self.ports):
             self.feedback.setText('All schematic ports already have an interface'); return
         if self.profile.validation_errors(revolved=True):
             self.feedback.setText('Create a valid cavity profile before picking a surface'); return
@@ -353,6 +377,9 @@ class CavityEditor(QDialog):
 
     def place_surface_port(self,anchor):
         self.end_surface_placement()
+        if self.independent:
+            self.ports=[PortDefinition(m.id,f'Interface {index+1}',required=False) for index,m in enumerate(self.interfaces)]
+            self.ports.append(PortDefinition(new_id(),f'Interface {len(self.interfaces)+1}',required=False))
         dialog=InterfaceDialog(self.ports,self.interfaces,parent=self,profile=self.profile,anchor=anchor)
         if dialog.exec()==QDialog.Accepted:
             self.interfaces.append(dialog.result_marker)
@@ -501,13 +528,26 @@ class CavityEditor(QDialog):
         self.profile_changed()
 
     def profile_changed(self):
+        if self.independent:
+            self.ports=[PortDefinition(m.id,f'Interface {index+1}',required=False) for index,m in enumerate(self.interfaces)]
+            self.interface_labels.clear();self.interface_labels.update({m.id:f'Interface {index+1}' for index,m in enumerate(self.interfaces)})
+            for m in self.interfaces:
+                label=self.view.marker_labels.get(m.id)
+                if label:label.setText(self.interface_labels[m.id])
         errors = [] if self.cavity_type.currentText() == 'NONE' else self.profile.validation_errors(revolved=True)
         self.validity.setText('INVALID: ' + errors[0] if errors else 'VALID')
-        self.save_button.setEnabled(not errors)
+        interface_errors=[]
+        if self.independent:
+            for m in self.interfaces:
+                try:
+                    if m.surface_anchor is None:raise ValueError('Interface needs explicit surface reattachment')
+                    resolve_anchor(self.profile,m.surface_anchor)
+                except ValueError as error:interface_errors.append(str(error))
+        self.save_button.setEnabled(not errors and not interface_errors)
         self.correct_button.setVisible(self.cavity_type.currentText()=='REVOLVED_PROFILE' and any(v.r!=0 for v in self.profile.vertices[::max(1,len(self.profile.vertices)-1)]))
         self.validity.setStyleSheet('color: #b3261e' if errors else 'color: #267343')
         physical = PhysicalDefinition(self.cavity_type.currentText(), self.profile, self.interfaces)
-        self.warnings.setText('; '.join(physical.warnings(self.ports)))
+        self.warnings.setText('; '.join(physical.warnings(self.ports)+interface_errors))
         self.refresh_points()
         self.refresh_surface_views()
         self.refresh_markers(self.selected_port_id)
@@ -560,9 +600,10 @@ class CavityEditor(QDialog):
                 xyz,_=interface_pose(self.profile,marker)
                 status=f'{marker.interface_type} / {xyz[2]:g}'
             except ValueError: status='INVALID anchor'
-            for col, text in enumerate([marker.hydraulic_port_id,status]):
+            for col, text in enumerate([self.interface_labels.get(marker.id,marker.hydraulic_port_id),status]):
                 item = QTableWidgetItem(text)
                 item.setData(Qt.UserRole, marker.id)
+                item.setToolTip(marker.id)
                 self.markers.setItem(row, col, item)
             if marker.id == selected:
                 self.markers.selectRow(row)
@@ -638,7 +679,7 @@ class CavityEditor(QDialog):
         self.view.rebuild(self.selected_id)
         self.profile_changed()
 
-    def submit(self):
+    def submit(self,save_as_new=False):
         physical = PhysicalDefinition() if self.cavity_type.currentText() == 'NONE' else PhysicalDefinition('REVOLVED_PROFILE', self.profile, self.interfaces)
         try:
             physical.validate(self.ports,strict=True)
@@ -646,4 +687,15 @@ class CavityEditor(QDialog):
             self.feedback.setText(str(error))
             return
         self.result_physical = deepcopy(physical)
+        if self.independent:
+            cavity=deepcopy(self.cavity_definition) if self.cavity_definition else CavityDefinition('',deepcopy(self.profile))
+            cavity.name=self.cavity_name.text().strip();cavity.description=self.cavity_description.text()
+            cavity.profile=deepcopy(self.profile);cavity.interfaces=deepcopy(self.interfaces);cavity.geometry_type=physical.cavity_type
+            if save_as_new:cavity=cavity.duplicate(cavity.name)
+            try:
+                cavity.validate()
+                if self.save_callback is None and self.cavity_library is None:raise ValueError('Choose a cavity library before saving')
+                self.result_cavity=self.save_callback(cavity) if self.save_callback else self.cavity_library.save(cavity)
+                if self.result_cavity is None:return
+            except (ValueError,OSError) as error:self.feedback.setText(str(error));return
         self.accept()

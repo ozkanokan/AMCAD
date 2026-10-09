@@ -65,7 +65,9 @@ def corner_dimensions(profile):
             text = f'{dimension_number(vertex.corner.length_mm)} × {vertex.corner.angle_deg:.6g}°'
         else:
             continue
-        result.append({'vertex_id': vertex.id, 'kind': feature['kind'], 'target': target, 'text': text})
+        dimension={'vertex_id': vertex.id, 'kind': feature['kind'], 'target': target, 'text': text}
+        if feature['kind']=='arc': dimension['center']=feature['center']
+        result.append(dimension)
     return result
 
 
@@ -499,38 +501,61 @@ class CavitySketchView(QGraphicsView):
         margin = 8
         for dimension in self.dimensions:
             z, y = dimension['target']
-            target = QPointF(self.mapFromScene(QPointF(z, -y)))
+            target = self.viewportTransform().map(QPointF(z,-y))
             if not self.viewport().rect().adjusted(-50, -50, 50, 50).contains(target.toPoint()):
                 continue
             width = metrics.horizontalAdvance(dimension['text']) + 10
             height = metrics.height() + 4
             candidates = []
-            for dy in (-48, 40, -76, 68, -104, 96):
-                for dx in (32, -width-32):
-                    box = QRectF(target.x()+dx, target.y()+dy-height/2, width, height)
-                    box.moveLeft(max(margin, min(self.viewport().width()-width-margin, box.left())))
-                    box.moveTop(max(28, min(self.viewport().height()-height-margin, box.top())))
-                    score = sum(box.adjusted(-5, -5, 5, 5).intersects(old) for old in occupied)*1000
-                    score += 1000 if profile_obstacle.intersects(box) else 0
-                    score += sum(box.intersects(label) for label in label_boxes)*1000
-                    score += sum(box.adjusted(-8, -8, 8, 8).contains(QPointF(p)) for p in obstacles)*100
-                    score += abs(dy)
-                    candidates.append((score, box))
+            radial=dimension['kind']=='arc'
+            if radial:
+                cz,cy=dimension['center']
+                center=self.viewportTransform().map(QPointF(cz,-cy))
+                direction=target-center
+                norm=math.hypot(direction.x(),direction.y())
+                unit=direction/norm
+                for distance in (28,44,64,88,120,160):
+                    label_center=target+unit*(distance+width/2)
+                    box=QRectF(label_center.x()-width/2,label_center.y()-height/2,width,height)
+                    score=sum(box.adjusted(-5,-5,5,5).intersects(old) for old in occupied)*1000
+                    score+=1000 if profile_obstacle.intersects(box) else 0
+                    score+=sum(box.intersects(label) for label in label_boxes)*1000
+                    score+=10000 if not QRectF(self.viewport().rect()).adjusted(margin,28,-margin,-margin).contains(box) else 0
+                    candidates.append((score+distance,box))
+            else:
+                for dy in (-48, 40, -76, 68, -104, 96):
+                    for dx in (32, -width-32):
+                        box = QRectF(target.x()+dx, target.y()+dy-height/2, width, height)
+                        box.moveLeft(max(margin, min(self.viewport().width()-width-margin, box.left())))
+                        box.moveTop(max(28, min(self.viewport().height()-height-margin, box.top())))
+                        score = sum(box.adjusted(-5, -5, 5, 5).intersects(old) for old in occupied)*1000
+                        score += 1000 if profile_obstacle.intersects(box) else 0
+                        score += sum(box.intersects(label) for label in label_boxes)*1000
+                        score += sum(box.adjusted(-8, -8, 8, 8).contains(QPointF(p)) for p in obstacles)*100
+                        score += abs(dy)
+                        candidates.append((score, box))
             box = min(candidates, key=lambda entry: entry[0])[1]
             occupied.append(box)
-            elbow = QPointF(box.left() if box.center().x() > target.x() else box.right(), box.center().y())
-            painter.setPen(QPen(QColor('#596b77'), 1))
-            painter.drawLine(target, elbow)
-            painter.drawLine(elbow, QPointF(box.right() if elbow.x() == box.left() else box.left(), elbow.y()))
-            direction = elbow-target
-            norm = math.hypot(direction.x(), direction.y()) or 1
-            unit = QPointF(direction.x()/norm, direction.y()/norm)
+            painter.setPen(QPen(QColor('#596b77'),1))
+            if radial:
+                elbow=box.center()
+                # True radial line: arc center, arrow tip and label are collinear.
+                painter.drawLine(center,elbow)
+            else:
+                elbow = QPointF(box.left() if box.center().x() > target.x() else box.right(), box.center().y())
+                painter.drawLine(target, elbow)
+                painter.drawLine(elbow, QPointF(box.right() if elbow.x() == box.left() else box.left(), elbow.y()))
+                direction = elbow-target
+                norm = math.hypot(direction.x(), direction.y()) or 1
+                unit = QPointF(direction.x()/norm, direction.y()/norm)
             normal = QPointF(-unit.y(), unit.x())
             painter.setBrush(QColor('#596b77'))
             painter.drawPolygon(QPolygonF([target, target+unit*7+normal*2.5, target+unit*7-normal*2.5]))
             painter.fillRect(box, QColor('#f4f7fa'))
             painter.drawText(box, Qt.AlignCenter, dimension['text'])
-            self.dimension_layout.append({'vertex_id': dimension['vertex_id'], 'rect': box, 'target': target})
+            layout={'vertex_id':dimension['vertex_id'],'rect':box,'target':target,'leader_end':elbow,'arrow_direction':unit}
+            if radial: layout['center']=center
+            self.dimension_layout.append(layout)
         painter.restore()
 
     def fit_profile(self):

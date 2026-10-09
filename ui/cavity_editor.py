@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, Q
 from core.cavity import CavityProfile, ProfileVertex, Corner, PhysicalDefinition, HydraulicInterface
 from ui.cavity_sketch_view import CavitySketchView
 from core.cavity_surface import (SurfaceAnchor, ChannelSection, normalized, surface_patches,
-    resolve_anchor, interface_pose, revolved_surface, anchor_key, outward_direction, legacy_surface_anchor)
+    resolve_anchor, interface_pose, revolved_surface, anchor_key, legacy_surface_anchor)
 from ui.cavity_surface_view import CavitySurfaceView
 
 
@@ -47,6 +47,7 @@ class CollapsiblePanel(QWidget):
         self.header=QToolButton(); self.header.setText(title); self.header.setCheckable(True)
         self.header.setChecked(True); self.header.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.header.setArrowType(Qt.DownArrow)
+        self.header.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Fixed)
         self.contents=QWidget(); self.content_layout=QVBoxLayout(self.contents)
         self.content_layout.setContentsMargins(0,0,0,0)
         layout.addWidget(self.header); layout.addWidget(self.contents,1)
@@ -105,7 +106,7 @@ class InterfaceDialog(QDialog):
         form=group('3. Channel Direction'); self.vector=[interface_number(v,step=.01) for v in vector]
         row=QHBoxLayout()
         for label,widget in zip(('dx','dy','dz'),self.vector): row.addWidget(QLabel(label)); row.addWidget(widget)
-        form.addRow(row); form.addRow(QLabel('Outward vectors normalize; inward vectors reverse; tangential vectors are rejected.'))
+        form.addRow(row); form.addRow(QLabel('Nonzero channel axis; normalized without changing its sign.'))
         form=group('4. Cross Section'); self.section_type=QComboBox(); self.section_type.addItems(['CIRCLE','SLOT','RECTANGLE'])
         section=marker.section if marker and marker.section else ChannelSection(diameter_mm=marker.nominal_connection_diameter_mm if marker else 4)
         self.section_type.setCurrentText(section.type)
@@ -163,11 +164,10 @@ class InterfaceDialog(QDialog):
             if not self.anchor and not self.marker: raise ValueError('New hydraulic interfaces require a surface anchor')
             vector=tuple(w.value() for w in self.vector)
             if self.marker and vector==self.original_vector: vector=interface_pose(self.profile,self.marker)[1]
+            vector=normalized(vector)
             if self.anchor:
-                vector=outward_direction(self.profile,self.anchor,vector)
                 marker.interface_type='SURFACE'
                 xyz,_=resolve_anchor(self.profile,self.anchor); marker.z_mm=xyz[2]; marker.r_mm=math.hypot(*xyz[:2])
-            else: vector=normalized(vector)
             if self.marker and self.marker.direction and tuple(w.value() for w in self.vector)==self.original_vector:
                 original=self.marker.direction
                 if math.isclose(math.sqrt(sum(v*v for v in original)),1,abs_tol=1e-12) and sum(a*b for a,b in zip(original,vector))>0:
@@ -186,7 +186,7 @@ class CavityEditor(QDialog):
     def __init__(self, ports, physical=None, parent=None):
         super().__init__(parent)
         self.setLocale(QLocale.c())
-        self.setWindowTitle('Cavity Profile — Four-view Surface Editor V1.4a')
+        self.setWindowTitle('Cavity Profile — Four-view Surface Editor V1.4b')
         self.setWindowFlags(self.windowFlags()|Qt.WindowMaximizeButtonHint|Qt.WindowMinimizeButtonHint)
         self.resize(1500,900)
         self.ports = deepcopy(ports)

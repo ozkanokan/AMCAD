@@ -2,7 +2,7 @@
 from pathlib import Path
 from core.project import Project
 from core.graph import save_graph
-from core.cavity_surface import outward_direction,resolve_anchor
+from core.cavity_surface import normalized,resolve_anchor
 
 
 def create_refined_surface_demo():
@@ -13,7 +13,7 @@ def create_refined_surface_demo():
     profile=physical.cavity_profile
     profile.vertices[0].r=profile.vertices[-1].r=0
     for marker in physical.hydraulic_interfaces:
-        marker.direction=outward_direction(profile,marker.surface_anchor,marker.direction)
+        marker.direction=normalized(marker.direction)
         marker.preview_mode='CENTERED'; marker.preview_length_mm=2
         xyz,_=resolve_anchor(profile,marker.surface_anchor)
         marker.z_mm=xyz[2]; marker.r_mm=(xyz[0]**2+xyz[1]**2)**.5

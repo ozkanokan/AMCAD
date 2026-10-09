@@ -2,7 +2,7 @@
 from copy import deepcopy
 import math
 from PySide6.QtCore import Qt, Signal, QPointF
-from PySide6.QtGui import QPainter, QColor, QPen, QPolygonF, QPalette
+from PySide6.QtGui import QPainter, QColor, QPen, QPolygonF, QPalette, QQuaternion, QVector3D
 from PySide6.QtWidgets import QWidget
 from core.cavity_surface import dot, sub, cross, normalized, interface_pose, channel_mesh
 
@@ -25,7 +25,12 @@ class CavitySurfaceView(QWidget):
     def __init__(self,label,parent=None):
         super().__init__(parent)
         self.label=label; self.profile=None; self.surface=None; self.interfaces=[]; self.channels={}
-        self.selected_port=None; self.place_mode=False; self.yaw=-35; self.elevation=30
+        self.selected_port=None; self.place_mode=False
+        a,e=math.radians(-35),math.radians(30)
+        right=(math.cos(a),-math.sin(a),0)
+        up=(math.sin(a)*math.sin(e),math.cos(a)*math.sin(e),math.cos(e))
+        self.orientation=QQuaternion.fromAxes(QVector3D(*right),QVector3D(*up),QVector3D(*cross(right,up)))
+        self.camera_axes=(right,up,cross(right,up))
         self.zoom=12; self.pan=QPointF(); self.center=(0,0,0); self.last_mouse=None; self.mouse_button=None
         self.setMinimumSize(200,170); self.setFocusPolicy(Qt.StrongFocus)
         self.setToolTip('Left drag: orbit (ISO); middle/right drag: pan; wheel: zoom; double-click port: edit')
@@ -33,10 +38,22 @@ class CavitySurfaceView(QWidget):
     def basis(self):
         if self.label=='XZ': return (0,0,1),(1,0,0),(0,1,0)
         if self.label=='XY': return (1,0,0),(0,1,0),(0,0,1)
-        a,e=math.radians(self.yaw),math.radians(self.elevation)
-        right=(math.cos(a),-math.sin(a),0)
-        up=(math.sin(a)*math.sin(e),math.cos(a)*math.sin(e),math.cos(e))
-        return right,up,cross(right,up)
+        return self.camera_axes
+
+    def trackball(self,position):
+        """Continuous virtual sphere in camera coordinates, centered on the view target."""
+        scale=max(1,min(self.width(),self.height())/2)
+        x=(position.x()-self.width()/2-self.pan.x())/scale
+        y=(self.height()/2+self.pan.y()-position.y())/scale
+        length=math.hypot(x,y)
+        if length>1: return QVector3D(x/length,y/length,0)
+        return QVector3D(x,y,math.sqrt(max(0,1-x*x-y*y)))
+
+    def orbit(self,start,end):
+        rotation=QQuaternion.rotationTo(self.trackball(start),self.trackball(end))
+        self.orientation=(self.orientation*rotation.conjugated()).normalized()
+        axes=[self.orientation.rotatedVector(axis) for axis in (QVector3D(1,0,0),QVector3D(0,1,0),QVector3D(0,0,1))]
+        self.camera_axes=tuple(v.toTuple() for v in axes)
 
     def project(self,xyz):
         right,up,depth=self.basis(); relative=sub(xyz,self.center)
@@ -153,9 +170,10 @@ class CavitySurfaceView(QWidget):
 
     def mouseMoveEvent(self,event):
         if self.last_mouse is None: return
-        delta=event.position()-self.last_mouse; self.last_mouse=event.position()
+        previous=self.last_mouse
+        delta=event.position()-previous; self.last_mouse=event.position()
         if self.mouse_button==Qt.LeftButton and self.label=='ISO':
-            self.yaw+=delta.x()*.6; self.elevation=max(-89,min(89,self.elevation+delta.y()*.6))
+            self.orbit(previous,event.position())
         else: self.pan+=delta
         self.update(); event.accept()
 

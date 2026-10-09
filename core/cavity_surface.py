@@ -202,15 +202,6 @@ def channel_mesh(profile,interface):
     return Mesh(vertices,triangles)
 
 
-OUTWARD_TOLERANCE=1e-6
-
-def outward_direction(profile,anchor,direction):
-    vector=normalized(direction); _,normal=resolve_anchor(profile,anchor)
-    alignment=dot(vector,normal)
-    if abs(alignment)<=OUTWARD_TOLERANCE: raise ValueError('Channel direction is near-tangential to the cavity surface')
-    return mul(vector,-1) if alignment<0 else vector
-
-
 def legacy_surface_anchor(profile,interface,tolerance=1e-8):
     """Exact legacy location only. Axis locations have no known circumferential angle."""
     if interface.surface_anchor is not None: return interface.surface_anchor

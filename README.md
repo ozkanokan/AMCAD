@@ -1,7 +1,7 @@
-# AMCAD — Hydraulic Manifold Schematic Editor (V1.4a)
+# AMCAD — Hydraulic Manifold Schematic Editor (V1.4b)
 
 A standalone Python / PySide6 desktop editor for hydraulic schematics and their
-graph foundation. V1.4a refines the existing axisymmetric cavity sketcher with
+graph foundation. V1.4b refines the existing axisymmetric cavity sketcher with
 synchronized YZ/XZ/XY/ISO views, surface-anchored hydraulic ports, arbitrary 3D
 channel directions and circle/slot/rectangle channel previews. The point table,
 Draw/Edit modes, parametric corners and engineering leaders remain available.
@@ -49,7 +49,7 @@ definitions, library/project persistence and GUI save/reopen. V1.3a checks also
 exercise treated-corner dragging, marker placement followed by editing, Escape
 cancellation, feature preservation during insertion, and decimal periods under
 a non-English default locale.
-V1.4/V1.4a tests cover revolved coordinates/open ends, surface picking, stable anchors,
+V1.4–V1.4b tests cover revolved coordinates/open ends, surface picking, stable anchors,
 direction normalization, section frames/rotation, channel geometry, invalid-anchor
 recovery, synchronized selection, dark-theme contrast and JSON round trips.
 `--smoke` renders the actual window and exits. Native Windows/macOS displays and
@@ -150,7 +150,9 @@ all instances share one profile and the same schematic port identities.
   directly editable. Zero the active dimension to return to SHARP; angle is inactive
   without a chamfer. No separate Apply button is needed.
 - Corner treatments never move or replace theoretical vertices. The finished profile
-  uses derived arcs/trimmed segments, with automatic radius/chamfer leaders. Selecting
+  uses derived arcs/trimmed segments, with automatic radius/chamfer leaders. Radius
+  leaders pass through the true arc center, with the arrow on the arc and the label
+  on its outward radial extension; zoom does not change the annotation geometry. Selecting
   or hovering a treated point shows subtle dashed theoretical edge extensions.
   Dragging it recomputes geometry while preserving its feature parameters and ID.
 - **Insert After Selected** arms the next canvas click; **Delete Selected Point** removes
@@ -197,8 +199,9 @@ or used to generate a CAD solid.
    Picking records the persistent segment/feature, its along-feature parameter
    and circumferential angle. It initializes direction from the local wall normal.
 3. Assign an existing schematic port ID. Edit **dx/dy/dz**, cross section and
-   section rotation; inward vectors reverse automatically; zero or near-tangential vectors are rejected.
-   This checks only the local outward start. Circle uses diameter, slot uses
+   section rotation. Direction is an **unoriented channel axis**: any nonzero vector
+   is accepted and normalized, including inward and tangent vectors. Its sign is
+   preserved; picking still initializes from the wall normal. Circle uses diameter, slot uses
    width and overall capsule length, rectangle uses width/height. Sizes must be
    positive; slot length must be at least its width.
 4. Set **Total extent** to visualize the finite channel (new ports default to
@@ -212,7 +215,9 @@ or used to generate a CAD solid.
    persist on the reusable definition; meshes and resolved XYZ are recomputed.
 
 Wheel zooms in every pane. Middle drag pans YZ; middle/right drag pans the other
-panes. ISO left drag orbits; empty left drag pans orthographic projections.
+panes. ISO left drag uses unrestricted quaternion trackball orbit around the view
+target, including the opposite end; it has no Euler-angle elevation limit or pole
+flip. Empty left drag pans orthographic projections.
 **Fit** fits all four panes. Escape cancels surface-port placement without closing
 the editor. Profile edits regenerate all views and anchored port positions.
 Removing/replacing an anchored corner or inserting between an anchored vertex pair
@@ -241,8 +246,9 @@ saving cavity edits. See [surface/port format](docs/cavity-surface.md).
 
 For manual evaluation, open [the V1.4a example](examples/parallel_check_valves_v14a.amcad.json),
 select CV1, and choose **Component → Edit Definition Cavity…**. Resize/maximize, collapse
-each panel, edit Z and corner dimensions, then add a port on a picked surface. Try an
-inward and a tangential direction, verify centered previews, and save/reopen. CV1/CV2
+each full-width panel header, edit Z and corner dimensions, then add a port on a
+picked surface. Try inward and tangential axes, verify their signs and centered
+previews, orbit to the opposite end, and save/reopen. CV1/CV2
 share one definition. The original V1.3/V1.4 examples remain available for compatibility
 checks and require explicit endpoint correction before saving cavity edits.
 

@@ -6,7 +6,7 @@ from PySide6.QtGui import QColor,QPalette,QWheelEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QDialog,QSplitter
 from core.cavity import HydraulicInterface,PhysicalDefinition,Corner
-from core.cavity_surface import SurfaceAnchor,ChannelSection,resolve_anchor,interface_pose,channel_mesh,outward_direction
+from core.cavity_surface import SurfaceAnchor,ChannelSection,resolve_anchor,interface_pose,channel_mesh,normalized
 from core.project import Project
 from examples.create_physical_demo import check_valve_definition
 from ui.cavity_editor import CavityEditor,InterfaceDialog
@@ -65,7 +65,7 @@ def test_iso_surface_pick_create_general_slot_port_select_all_views_save_reopen(
     assert len(editor.interfaces)==1 and not editor.surface_place_mode
     marker=editor.interfaces[0]
     assert marker.hydraulic_port_id=='OUT' and marker.section.type=='SLOT'
-    assert marker.direction==pytest.approx(outward_direction(editor.profile,anchor,(1,2,3)))
+    assert marker.direction==pytest.approx(normalized((1,2,3)))
     assert marker.section_rotation_deg==32.5 and marker.preview_length_mm==9.25
     assert all(view.selected_port==marker.id for view in editor.surface_views.values())
     assert editor.view.marker_items[marker.id].isSelected()
@@ -134,10 +134,11 @@ def test_invalid_anchor_flagged_hidden_but_can_be_explicitly_reattached(qapp,edi
 
 
 def test_orbit_pan_zoom_and_escape_surface_placement_do_not_modify_profile(qapp,editor):
-    view=editor.surface_views['ISO']; before=editor.profile.to_dict(); yaw=view.yaw
+    view=editor.surface_views['ISO']; before=editor.profile.to_dict(); orientation=view.orientation
     start=QPoint(20,40); end=QPoint(60,70)
     QTest.mousePress(view,Qt.LeftButton,pos=start); QTest.mouseMove(view,end,delay=20); QTest.mouseRelease(view,Qt.LeftButton,pos=end)
-    assert view.yaw!=yaw
+    assert view.orientation!=orientation
+    assert view.pick_surface(QPointF(surface_pixel(view))) is not None
     pan=QPointF(view.pan)
     QTest.mousePress(view,Qt.MiddleButton,pos=start); QTest.mouseMove(view,end,delay=20); QTest.mouseRelease(view,Qt.MiddleButton,pos=end)
     assert view.pan!=pan

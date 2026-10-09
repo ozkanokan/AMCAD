@@ -8,7 +8,7 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QDoubleSpinBox
 from core.cavity import CavityProfile,ProfileVertex,Corner,HydraulicInterface,PhysicalDefinition
 from core.cavity_surface import (SurfaceAnchor,ChannelSection,surface_patches,resolve_anchor,
-    outward_direction,channel_mesh,legacy_surface_anchor,dot)
+    normalized,channel_mesh,legacy_surface_anchor,dot)
 from core.port import PortDefinition
 from examples.create_physical_demo import check_valve_definition
 from ui.cavity_editor import CavityEditor,InterfaceDialog
@@ -73,10 +73,7 @@ def test_outward_normals_independent_of_traversal(reverse,phi):
     a=deepcopy(patch.anchor); a.angle_deg=phi
     xyz,n=resolve_anchor(p,a); expected=(math.cos(math.radians(phi)),math.sin(math.radians(phi)),0)
     assert n==pytest.approx(expected)
-    assert outward_direction(p,a,tuple(-3*v for v in n))==pytest.approx(n)
-    assert dot(outward_direction(p,a,n),n)>1-1e-12
-    for d in ((0,0,0),(0,0,1),tuple(n[i]*1e-8+(1 if i==2 else 0) for i in range(3))):
-        with pytest.raises(ValueError): outward_direction(p,a,d)
+
 
 
 @pytest.mark.parametrize('kind',['CIRCLE','SLOT','RECTANGLE'])
@@ -151,7 +148,7 @@ def test_legacy_invalid_geometry_is_not_modified_on_open(qapp):
     finally: e.reject()
 
 
-def test_grouped_port_dialog_precision_normals_and_inward_correction(qapp):
+def test_grouped_port_dialog_precision_normals_and_signed_axis(qapp):
     p=rectangle(); a=surface_patches(p)[1].anchor; a.angle_deg=90
     oldlocale=QLocale(); QLocale.setDefault(QLocale(QLocale.German))
     d=InterfaceDialog([PortDefinition('IN','IN')],[],profile=p,anchor=a)
@@ -163,7 +160,7 @@ def test_grouped_port_dialog_precision_normals_and_inward_correction(qapp):
             assert w.decimals()==3 and w.locale().decimalPoint()=='.'
             assert len(w.text().split('.')[-1])==3
         for w,x in zip(d.vector,(0,-2,0)): w.setValue(x)
-        d.submit(); assert d.result_marker.direction==pytest.approx((0,1,0))
+        d.submit(); assert d.result_marker.direction==pytest.approx((0,-1,0))
         assert d.result_marker.preview_length_mm==2 and d.result_marker.preview_mode=='CENTERED'
     finally: d.reject(); QLocale.setDefault(oldlocale)
 

@@ -60,10 +60,11 @@ errors may remain visible as INVALID and cannot be saved. No edit silently tunes
 or deletes a corner feature.
 
 Renderer and dimension annotations share the model's exact `features()` geometry.
-Radius leaders target the derived arc midpoint; chamfer leaders target the cut
+Radius leaders pass through the true arc center and target the derived arc midpoint; chamfer leaders target the cut
 midpoint. The main profile is trimmed; selectable handles remain on theoretical
 vertices. Selected/hovered treatments show dashed extensions to the original corner.
-Text/leaders remain a constant display size while zooming. Placement avoids obvious
+Arrowheads and text remain a constant display size while zooming; radius leaders
+remain radially aligned and labels sit on the outward extension. Placement avoids obvious
 profile/label overlap where space permits; crowded views may still need zooming.
 Annotations, construction lines, tangent points and live drawing previews are not
 persisted and never alter authoritative geometry.

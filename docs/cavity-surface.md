@@ -1,4 +1,4 @@
-# V1.4a surface and hydraulic port contract
+# V1.4b surface and hydraulic port contract
 
 The existing profile version 1 remains authoritative: original Z/r vertices, UUIDs,
 parametric corner features and fixed Z=0/Y=0 datum. Project/graph version 5 introduces
@@ -65,9 +65,10 @@ independent coordinate capable of overriding the anchor. Arbitrary nonzero finit
 directions normalize safely; existing unit vectors retain their values on reload.
 New ports initialize from the outward void-to-material normal. Closed-profile signed
 area determines orientation, including non-monotonic Z traversal. Edited directions
-normalize and must satisfy dot(d,n)>1e-6: inward vectors reverse, zero and near-tangent
-vectors reject. This is local validation, not a global collision guarantee. Legacy
-directions are never changed on load.
+represent an unoriented channel axis: every nonzero vector is accepted, normalized
+and stored with its chosen sign. Inward and tangent axes are valid; no dot-product
+restriction or automatic reversal applies. Zero vectors reject. This does not
+validate channel routing or collisions. Legacy directions are unchanged on load.
 
 Section types:
 
@@ -120,3 +121,18 @@ PhysicalDefinition.validate(ports, strict=True) or profile.validate(revolved=Tru
 when validating a finished cavity. Invalid anchored features remain flagged, never
 retargeted. Profiles with internal axis contact, closure overlap, zero enclosed area
 or sampled self-intersection are invalid. Arc intersection checks remain tessellated.
+
+## V1.4b camera and annotations
+
+ISO uses a quaternion virtual-sphere trackball around the current view target. Left
+drag rotates in 3D without an elevation clamp or Euler pole singularities. Normalized
+quaternions maintain an orthonormal projection basis. Middle/right pan and wheel
+zoom retain their behavior; orthographic panes and surface picking use the same
+projection contract. Orbit is presentation state and never changes profile/port data.
+
+Fillet dimensions use the evaluated center and arc midpoint. Their arrow tip is
+mapped to the actual arc without integer pixel rounding. The radial line passes
+through center, tip and label center, with the arrow directed toward the arc. Labels
+choose among distances along that extension to reduce crowding; exceptionally dense
+features or an off-screen extension may still require zoom/pan. Chamfer leaders keep
+their existing geometry. Panel header bars span the available sidebar width.

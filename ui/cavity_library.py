@@ -2,23 +2,23 @@
 from copy import deepcopy
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QDialog,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QTableWidget,
-    QTableWidgetItem,QHeaderView,QComboBox,QFormLayout,QDialogButtonBox,QInputDialog,QCheckBox)
+    QTableWidgetItem,QHeaderView,QComboBox,QFormLayout,QDialogButtonBox,QInputDialog,QCheckBox,QListWidget,QListWidgetItem,QMessageBox,QScrollArea,QWidget)
 
 
 class PortMappingDialog(QDialog):
     def __init__(self,definition,cavity,mapping=None,parent=None):
         super().__init__(parent);self.setWindowTitle('Map Schematic Ports to Cavity Interfaces')
         self.mapping=None;self.controls={};self.cavity=cavity
-        form=QFormLayout(self);form.addRow(QLabel('Choose each association explicitly. Every interface must be used once.'))
+        root=QVBoxLayout(self);root.addWidget(QLabel('Choose each association explicitly. Every interface must be used once.'))
+        scroll=QScrollArea();scroll.setWidgetResizable(True);content=QWidget();form=QFormLayout(content);scroll.setWidget(content);root.addWidget(scroll);self.resize(560,480)
         for port in definition.ports:
             combo=QComboBox();combo.addItem('Choose an interface…',None)
-            for index,m in enumerate(cavity.interfaces):combo.addItem(f'Interface {index+1} · {m.id}',m.id)
+            for index,m in enumerate(cavity.interfaces):combo.addItem(f'Interface {index+1} ({m.interface_type})',m.id)
             selected=(mapping or {}).get(port.id)
             if selected:combo.setCurrentIndex(combo.findData(selected))
-            elif len(definition.ports)==1 and cavity.port_count==1:combo.setCurrentIndex(1)
-            self.controls[port.id]=combo;form.addRow(port.display_name+' ['+port.id+']',combo)
-        self.feedback=QLabel();form.addRow(self.feedback)
-        buttons=QDialogButtonBox(QDialogButtonBox.Ok|QDialogButtonBox.Cancel);form.addRow(buttons)
+            self.controls[port.id]=combo;form.addRow(port.display_name,combo)
+        self.feedback=QLabel();root.addWidget(self.feedback)
+        buttons=QDialogButtonBox(QDialogButtonBox.Ok|QDialogButtonBox.Cancel);root.addWidget(buttons)
         buttons.accepted.connect(self.submit);buttons.rejected.connect(self.reject)
 
     def submit(self):
@@ -38,13 +38,22 @@ class CavityLibraryDialog(QDialog):
             errors=QLabel('Could not load: '+'; '.join(owner.cavity_library.errors));errors.setWordWrap(True);root.addWidget(errors)
         if instance_id:
             i=owner.project.instances[instance_id]
-            root.addWidget(QLabel(f'Assignment applies only to {i.name} · {i.id}'))
+            root.addWidget(QLabel(f'Assignment applies only to {i.name}'))
         self.compatible=QCheckBox('Show only valid cavities with matching hydraulic interface count')
         self.compatible.setChecked(bool(instance_id));self.compatible.setVisible(bool(instance_id));root.addWidget(self.compatible)
-        self.table=QTableWidget(0,6);self.table.setHorizontalHeaderLabels(['Cavity name','Ports','Geometry','Revision','Usage','Status'])
+        self.table=QTableWidget(0,7);self.table.setHorizontalHeaderLabels(['Cavity name','Ports','Geometry','Revision','Usage','Status','Category'])
         self.table.setSelectionBehavior(QTableWidget.SelectRows);self.table.setSelectionMode(QTableWidget.SingleSelection)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers);self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(5,QHeaderView.Stretch);root.addWidget(self.table,1)
+        self.usages=QListWidget();self.usages.setMaximumHeight(90);root.addWidget(QLabel('Referencing components'));root.addWidget(self.usages)
+        usage_row=QHBoxLayout()
+        for label,callback in [('Locate in Schematic',self.locate),('Remove Selected Reference',self.remove_reference)]:
+            button=QPushButton(label);button.clicked.connect(callback);usage_row.addWidget(button)
+        root.addLayout(usage_row)
+        organization=QHBoxLayout()
+        for label,operation in [('New Category','create'),('Rename / Move Category','rename'),('Move Entry','move')]:
+            button=QPushButton(label);button.clicked.connect(lambda checked=False,op=operation:self.organize(op));organization.addWidget(button)
+        root.addLayout(organization)
         self.feedback=QLabel();self.feedback.setWordWrap(True);root.addWidget(self.feedback)
         row=QHBoxLayout()
         self.buttons={}
@@ -57,7 +66,9 @@ class CavityLibraryDialog(QDialog):
                                ('Import Legacy for This Instance…',self.import_legacy)]:
             b=QPushButton(label);b.clicked.connect(callback);row.addWidget(b);self.buttons[label]=b
         root.addLayout(row);close=QDialogButtonBox(QDialogButtonBox.Close);close.rejected.connect(self.reject);root.addWidget(close)
-        self.compatible.toggled.connect(self.refresh);self.refresh()
+        self.compatible.toggled.connect(self.refresh);self.table.itemSelectionChanged.connect(self.refresh_usage)
+        current=owner.project.instances[instance_id].cavity_ref if instance_id else None
+        self.refresh(current)
 
     def selected_id(self):
         item=self.table.item(self.table.currentRow(),0);return item.data(Qt.UserRole) if item else None
@@ -79,15 +90,22 @@ class CavityLibraryDialog(QDialog):
             status=library.status(project,cavity.id)
             if not valid:status+=' · INVALID: '+reason
             records.append((cavity,status))
+        self.table.blockSignals(True)
         self.table.setRowCount(len(records))
         for row,(cavity,status) in enumerate(records):
-            for col,value in enumerate([cavity.name,cavity.port_count,cavity.geometry_type,cavity.revision,len(project.cavity_usage(cavity.id)),status]):
-                item=QTableWidgetItem(str(value));item.setData(Qt.UserRole,cavity.id);item.setToolTip(cavity.id);self.table.setItem(row,col,item)
+            for col,value in enumerate([cavity.name,cavity.port_count,cavity.geometry_type,cavity.revision,len(project.cavity_usage(cavity.id)),status,library.category_for(cavity)]):
+                item=QTableWidgetItem(str(value));item.setData(Qt.UserRole,cavity.id);item.setToolTip(library.category_for(cavity));self.table.setItem(row,col,item)
+                if col==0:
+                    from ui.library_preview import cavity_icon
+                    item.setIcon(cavity_icon(cavity))
             if cavity.id==selected:self.table.selectRow(row)
         if self.table.currentRow()<0 and records:self.table.selectRow(0)
+        self.table.blockSignals(False);self.refresh_usage()
         for label in ('Assign to Selected Component','Remove Assignment','Open Assigned Cavity','Import Legacy for This Instance…'):
             self.buttons[label].setEnabled(iid is not None)
+        self.buttons['Remove Assignment'].setEnabled(bool(iid and project.instances[iid].cavity_ref))
         self.buttons['Import Legacy for This Instance…'].setVisible(bool(iid and project.definitions[project.instances[iid].definition_id].physical.cavity_type!='NONE'))
+        self.owner.cavity_panel.refresh()
 
     def cavity(self):
         cid=self.selected_id()
@@ -139,19 +157,21 @@ class CavityLibraryDialog(QDialog):
         iid=self.selected_instance();cavity=self.cavity()
         if not iid or cavity is None:self.feedback.setText('Select one component and a cavity');return
         def perform():
-            instance=self.owner.project.instances[iid];definition=self.owner.project.definitions[instance.definition_id]
+            instance=self.owner.project.instances[iid];definition=self.owner.project.effective_definition(iid)
             cavity.validate()
             if cavity.port_count!=len(definition.ports):raise ValueError('Hydraulic interface count is incompatible')
             mapping=instance.port_mapping if instance.cavity_ref==cavity.id else None
             dialog=PortMappingDialog(definition,cavity,mapping,self)
             if dialog.exec()!=QDialog.Accepted:return
             self.owner.project.assign_cavity(iid,cavity,dialog.mapping);self.owner.record_change()
-            self.feedback.setText(f'Assigned {cavity.name} to {instance.name} only');self.refresh(cavity.id)
+            self.feedback.setText(f'Assigned {cavity.name} to {instance.name} only');self.refresh(cavity.id);self.accept()
         self.run(perform)
 
     def remove_assignment(self):
         iid=self.selected_instance()
-        if iid:self.owner.project.remove_cavity_assignment(iid);self.owner.record_change();self.refresh()
+        if not iid:return
+        if self.instance_id is None and QMessageBox.question(self,'Remove Cavity Assignment',f'Remove the assignment from {self.owner.project.instances[iid].name}?',QMessageBox.Yes|QMessageBox.No)!=QMessageBox.Yes:return
+        self.owner.remove_assignment(iid);self.refresh()
 
     def open_assigned(self):
         iid=self.selected_instance()
@@ -178,3 +198,23 @@ class CavityLibraryDialog(QDialog):
                 self.compatible.setChecked(False);self.refresh(cavity.id)
                 self.feedback.setText('Imported an independent cavity for this instance. Legacy geometry remains unchanged. Edit/repair it, then assign with explicit mapping.')
                 self.owner.statusBar().showMessage(self.feedback.text())
+
+    def refresh_usage(self):
+        self.usages.clear()
+        for instance in self.owner.project.cavity_usage(self.selected_id()):
+            item=QListWidgetItem(instance.name);item.setData(Qt.UserRole,instance.id);self.usages.addItem(item)
+
+    def locate(self):
+        item=self.usages.currentItem()
+        self.owner.locate_cavity(self.selected_id(),item.data(Qt.UserRole) if item else None)
+
+    def remove_reference(self):
+        item=self.usages.currentItem()
+        if item is None:self.feedback.setText('Select a referencing component');return
+        if QMessageBox.question(self,'Remove Cavity Assignment',f'Remove the assignment from {item.text()}?',QMessageBox.Yes|QMessageBox.No)!=QMessageBox.Yes:return
+        self.owner.remove_assignment(item.data(Qt.UserRole));self.refresh()
+
+    def organize(self,operation):
+        from ui.library_organization import category_action
+        self.run(lambda:category_action(self,self.owner.cavity_library,operation,self.selected_id()))
+        self.refresh();self.owner.cavity_panel.refresh()

@@ -1,6 +1,6 @@
 {
   "schema": "amcad.hydraulic_graph",
-  "schema_version": 6,
+  "schema_version": 7,
   "component_definitions": [
     {
       "id": "external-port",
@@ -32,7 +32,10 @@
         "cavity_type": "NONE",
         "cavity_profile": null,
         "hydraulic_interfaces": []
-      }
+      },
+      "revision": 1,
+      "default_cavity_ref": null,
+      "default_port_mapping": {}
     },
     {
       "id": "junction-3",
@@ -95,7 +98,10 @@
         "cavity_type": "NONE",
         "cavity_profile": null,
         "hydraulic_interfaces": []
-      }
+      },
+      "revision": 1,
+      "default_cavity_ref": null,
+      "default_port_mapping": {}
     },
     {
       "id": "illustrative-check-valve",
@@ -283,7 +289,10 @@
             "preview_mode": "FORWARD"
           }
         ]
-      }
+      },
+      "revision": 1,
+      "default_cavity_ref": null,
+      "default_port_mapping": {}
     }
   ],
   "cavity_definitions": [],
@@ -298,7 +307,9 @@
       "definition_id": "external-port",
       "definition_name": "External Port",
       "cavity_ref": null,
-      "port_mapping": {}
+      "port_mapping": {},
+      "port_names": {},
+      "port_sides": {}
     },
     {
       "id": "1daa9cb9-3068-430a-b188-2136b7ad2942",
@@ -306,7 +317,9 @@
       "definition_id": "junction-3",
       "definition_name": "3-Way Junction",
       "cavity_ref": null,
-      "port_mapping": {}
+      "port_mapping": {},
+      "port_names": {},
+      "port_sides": {}
     },
     {
       "id": "71363e9e-218a-46f8-b037-b3c0616a4cbb",
@@ -314,7 +327,9 @@
       "definition_id": "illustrative-check-valve",
       "definition_name": "Illustrative Check Valve",
       "cavity_ref": null,
-      "port_mapping": {}
+      "port_mapping": {},
+      "port_names": {},
+      "port_sides": {}
     },
     {
       "id": "7507f560-7efa-4341-9b06-4d43d66f2716",
@@ -322,7 +337,9 @@
       "definition_id": "illustrative-check-valve",
       "definition_name": "Illustrative Check Valve",
       "cavity_ref": null,
-      "port_mapping": {}
+      "port_mapping": {},
+      "port_names": {},
+      "port_sides": {}
     },
     {
       "id": "92652dbb-e4ef-44fb-a1ab-2e00b00219e9",
@@ -330,7 +347,9 @@
       "definition_id": "external-port",
       "definition_name": "External Port",
       "cavity_ref": null,
-      "port_mapping": {}
+      "port_mapping": {},
+      "port_names": {},
+      "port_sides": {}
     },
     {
       "id": "52d6a082-790a-4dc4-b23e-9afd83bcc8fe",
@@ -338,7 +357,9 @@
       "definition_id": "external-port",
       "definition_name": "External Port",
       "cavity_ref": null,
-      "port_mapping": {}
+      "port_mapping": {},
+      "port_names": {},
+      "port_sides": {}
     }
   ],
   "nodes": [
@@ -348,6 +369,7 @@
       "port_id": "port",
       "kind": "external_port",
       "label": "IN",
+      "display_label": "Port",
       "port_type": "HYDRAULIC",
       "flow_direction": "UNSPECIFIED",
       "required": true
@@ -357,7 +379,8 @@
       "instance_id": "1daa9cb9-3068-430a-b188-2136b7ad2942",
       "port_id": "LEFT",
       "kind": "junction",
-      "label": "J1.LEFT",
+      "label": "J1.Left",
+      "display_label": "Left",
       "port_type": "HYDRAULIC",
       "flow_direction": "BIDIRECTIONAL",
       "required": true
@@ -367,7 +390,8 @@
       "instance_id": "1daa9cb9-3068-430a-b188-2136b7ad2942",
       "port_id": "RIGHT",
       "kind": "junction",
-      "label": "J1.RIGHT",
+      "label": "J1.Right",
+      "display_label": "Right",
       "port_type": "HYDRAULIC",
       "flow_direction": "BIDIRECTIONAL",
       "required": true
@@ -377,7 +401,8 @@
       "instance_id": "1daa9cb9-3068-430a-b188-2136b7ad2942",
       "port_id": "BOTTOM",
       "kind": "junction",
-      "label": "J1.BOTTOM",
+      "label": "J1.Bottom",
+      "display_label": "Bottom",
       "port_type": "HYDRAULIC",
       "flow_direction": "BIDIRECTIONAL",
       "required": true
@@ -388,6 +413,7 @@
       "port_id": "IN",
       "kind": "component_port",
       "label": "CV1.IN",
+      "display_label": "IN",
       "port_type": "HYDRAULIC",
       "flow_direction": "IN",
       "required": true
@@ -398,6 +424,7 @@
       "port_id": "OUT",
       "kind": "component_port",
       "label": "CV1.OUT",
+      "display_label": "OUT",
       "port_type": "HYDRAULIC",
       "flow_direction": "OUT",
       "required": true
@@ -408,6 +435,7 @@
       "port_id": "IN",
       "kind": "component_port",
       "label": "CV2.IN",
+      "display_label": "IN",
       "port_type": "HYDRAULIC",
       "flow_direction": "IN",
       "required": true
@@ -418,6 +446,7 @@
       "port_id": "OUT",
       "kind": "component_port",
       "label": "CV2.OUT",
+      "display_label": "OUT",
       "port_type": "HYDRAULIC",
       "flow_direction": "OUT",
       "required": true
@@ -428,6 +457,7 @@
       "port_id": "port",
       "kind": "external_port",
       "label": "OUT1",
+      "display_label": "Port",
       "port_type": "HYDRAULIC",
       "flow_direction": "UNSPECIFIED",
       "required": true
@@ -438,6 +468,7 @@
       "port_id": "port",
       "kind": "external_port",
       "label": "OUT2",
+      "display_label": "Port",
       "port_type": "HYDRAULIC",
       "flow_direction": "UNSPECIFIED",
       "required": true

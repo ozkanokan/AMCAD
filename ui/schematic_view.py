@@ -26,6 +26,7 @@ class SchematicView(QGraphicsView):
         self.draft_controls = []
         self.draft_axis = 0
         self.preview_item = None
+        self.alignment_guides=[]
         self.pan_start = None
         self.setScene(QGraphicsScene(self))
         self.setSceneRect(-5000,-5000,10000,10000)
@@ -38,13 +39,14 @@ class SchematicView(QGraphicsView):
         self.centerOn(0,0)
 
     def rebuild(self, selected=()):
+        self.clear_alignment()
         self.pending_node = None
         self.preview_item = None
         self.draft_controls = []
         self.port_items = {}; self.component_items = {}; self.wires = {}
         self.scene().clear()
         for instance in self.project.instances.values():
-            item = ComponentItem(instance, self.project.definitions[instance.definition_id], self)
+            item = ComponentItem(instance, self.project.effective_definition(instance.id), self)
             self.scene().addItem(item)
             self.component_items[instance.id] = item
             self.port_items.update(item.ports)
@@ -177,7 +179,7 @@ class SchematicView(QGraphicsView):
 
     def mousePressEvent(self,event):
         if self.pending_node is not None and event.button()==Qt.RightButton:
-            self.cancel_connection(); self.message.emit('Line cancelled'); event.accept(); return
+            self.clear_alignment();self.cancel_connection(); self.message.emit('Line cancelled'); event.accept(); return
         if self.pending_node is not None and event.button()==Qt.LeftButton:
             pos=self.mapToScene(event.position().toPoint())
             items=[i for i in self.scene().items(pos) if i is not self.preview_item]
@@ -208,7 +210,7 @@ class SchematicView(QGraphicsView):
 
     def keyPressEvent(self,event):
         if event.key()==Qt.Key_Escape:
-            self.cancel_connection(); self.message.emit('Line cancelled'); event.accept()
+            self.clear_alignment();self.cancel_connection(); self.message.emit('Line cancelled'); event.accept()
         else: super().keyPressEvent(event)
 
     def fit_content(self):
@@ -219,3 +221,37 @@ class SchematicView(QGraphicsView):
                 self.resetTransform(); self.scale(2,2); self.centerOn(rect.center())
         else:
             self.resetTransform(); self.centerOn(0,0)
+
+    def clear_alignment(self):
+        for item in self.alignment_guides:
+            if item.scene():self.scene().removeItem(item)
+        self.alignment_guides=[]
+
+    def aligned_position(self,item,position):
+        """Snap each axis independently: port matches precede center matches."""
+        self.clear_alignment()
+        if len(self.selected_instances())>1:return position
+        tolerance=6/max(self.transform().m11(),.01)
+        offsets=[item.mapToScene(port.pos())-item.pos() for port in item.ports.values()]
+        ports=[position+offset for offset in offsets]
+        others=[other for other in self.component_items.values() if other is not item and not other.isSelected()]
+        result=QPointF(position)
+        for axis in (0,1):
+            coordinate=lambda p:p.x() if axis==0 else p.y()
+            matches=[]
+            for other in others:
+                targets=[other.mapToScene(port.pos()) for port in other.ports.values()]
+                for source in ports:
+                    for target in targets:
+                        delta=coordinate(target)-coordinate(source)
+                        if abs(delta)<=tolerance:matches.append((0,abs(delta),delta,coordinate(target)))
+                delta=coordinate(other.pos())-coordinate(position)
+                if abs(delta)<=tolerance:matches.append((1,abs(delta),delta,coordinate(other.pos())))
+            if matches:
+                _,_,delta,line=min(matches)
+                if axis==0:result.setX(position.x()+delta)
+                else:result.setY(position.y()+delta)
+                pen=QPen(QColor('#169cad'),1,Qt.DashLine);pen.setCosmetic(True)
+                guide=self.scene().addLine(line,-5000,line,5000,pen) if axis==0 else self.scene().addLine(-5000,line,5000,line,pen)
+                guide.setAcceptedMouseButtons(Qt.NoButton);guide.setZValue(-.5);self.alignment_guides.append(guide)
+        return result

@@ -1,7 +1,7 @@
 from pathlib import Path
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QDockWidget, QPushButton,
                                QFileDialog, QMessageBox, QInputDialog, QLabel, QDialog,
-                               QFormLayout, QLineEdit, QComboBox, QDialogButtonBox)
+                               QFormLayout, QLineEdit, QComboBox, QDialogButtonBox, QTableWidget, QTableWidgetItem, QSpinBox)
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtCore import Qt
 from core.project import Project
@@ -33,15 +33,20 @@ class MainWindow(QMainWindow):
         self.view.properties_requested.connect(self.properties)
         self.view.component_dropped.connect(self.place)
         self.view.scene().selectionChanged.connect(self.selection_info)
-        dock = QDockWidget('COMPONENT LIBRARY',self)
+        dock = QDockWidget('Component Library',self)
+        self.component_dock=dock;dock.setObjectName('componentLibraryDock')
         dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
         panel = QWidget(); layout = QVBoxLayout(panel)
         hint = QLabel('Drag onto the canvas\nor double-click to place'); layout.addWidget(hint)
         self.library_panel = ComponentLibraryPanel(); layout.addWidget(self.library_panel)
-        self.library_panel.itemDoubleClicked.connect(self.place_center)
+        self.library_panel.itemDoubleClicked.connect(lambda item,column:self.place_center(item))
         new = QPushButton('+ New Component'); new.clicked.connect(self.new_component); layout.addWidget(new)
         dock.setWidget(panel); self.addDockWidget(Qt.RightDockWidgetArea,dock)
         dock.setMinimumWidth(220)
+        from ui.cavity_panel import CavityLibraryPanel
+        self.cavity_dock=QDockWidget('Cavity Library',self);self.cavity_dock.setObjectName('cavityLibraryDock')
+        self.cavity_panel=CavityLibraryPanel(self);self.cavity_dock.setWidget(self.cavity_panel)
+        self.addDockWidget(Qt.RightDockWidgetArea,self.cavity_dock);self.tabifyDockWidget(dock,self.cavity_dock);dock.raise_()
         self.actions = {}
         file_menu = self.menuBar().addMenu('&File')
         edit_menu = self.menuBar().addMenu('&Edit')
@@ -62,22 +67,30 @@ class MainWindow(QMainWindow):
             (edit_menu,'delete','Delete Selection',QKeySequence.Delete,self.delete_selection),
             (edit_menu,'delete_line','Delete Line',None,self.delete_lines),
             (edit_menu,'select_all','Select All',QKeySequence.SelectAll,self.select_all),
+            (component_menu,'component_library','Component Library…',None,self.open_component_library),
             (component_menu,'create','New Component…','Ctrl+Shift+N',self.new_component),
-            (component_menu,'cavity','Assign Cavity…','Ctrl+Shift+C',self.assign_cavity),
-            (component_menu,'rename','Properties / Rename…','F2',self.selected_properties),
-            (component_menu,'rotate','Rotate 90°','Ctrl+R',self.rotate_selection),
-            (component_menu,'junction','Add 3-Way Junction','Ctrl+J',self.add_junction),
-            (component_menu,'junction4','Add 4-Way Junction','Ctrl+Shift+J',lambda:self.add_junction(4)),
+            (None,'cavity','Assign Cavity…','Ctrl+Shift+C',self.assign_cavity),
+            (None,'rename','Properties / Rename…','F2',self.selected_properties),
+            (None,'rotate','Rotate 90°','Ctrl+R',self.rotate_selection),
+            (None,'junction','Add 3-Way Junction','Ctrl+J',self.add_junction),
+            (None,'junction4','Add 4-Way Junction','Ctrl+Shift+J',lambda:self.add_junction(4)),
             (cavity_menu,'cavity_library','Cavity Library…',None,self.open_cavity_library),
             (cavity_menu,'new_cavity','New Cavity…',None,self.new_cavity),
             (view_menu,'fit','Fit Schematic','F',self.view.fit_content),
-            (view_menu,'zoom_in','Zoom In','Ctrl++',lambda:self.view.zoom(1.15)),
-            (view_menu,'zoom_out','Zoom Out','Ctrl+-',lambda:self.view.zoom(1/1.15)),
+            (None,'zoom_in','Zoom In','Ctrl++',lambda:self.view.zoom(1.15)),
+            (None,'zoom_out','Zoom Out','Ctrl+-',lambda:self.view.zoom(1/1.15)),
         ]:
             action = QAction(label,self)
             if shortcut is not None: action.setShortcut(shortcut)
-            action.triggered.connect(callback); menu.addAction(action); self.actions[key]=action
-            if key in {'save','undo','redo','delete','rotate','junction','fit','cavity_library'}: toolbar.addAction(action)
+            action.triggered.connect(callback)
+            if menu is not None:menu.addAction(action)
+            else:self.addAction(action)
+            self.actions[key]=action
+            if key in {'save','undo','redo','delete','fit'}: toolbar.addAction(action)
+        component_menu.removeAction(self.actions['create']);component_menu.insertAction(self.actions['component_library'],self.actions['create'])
+        cavity_menu.removeAction(self.actions['new_cavity']);cavity_menu.insertAction(self.actions['cavity_library'],self.actions['new_cavity'])
+        for library_dock in (self.component_dock,self.cavity_dock):
+            view_menu.insertAction(self.actions['fit'],library_dock.toggleViewAction())
         self.refresh_library()
         self.update_title()
         self.statusBar().showMessage('Drag components • click a free port to draw a line • middle-drag to pan • wheel to zoom')
@@ -88,7 +101,8 @@ class MainWindow(QMainWindow):
     def refresh_library(self):
         self.available_definitions = dict(self.library.definitions)
         self.available_definitions.update(self.project.definitions)
-        self.library_panel.populate(self.available_definitions)
+        self.library_panel.populate(self.available_definitions,self.library)
+        self.cavity_panel.refresh()
 
     def selection_info(self):
         names = [self.project.instances[i].name for i in self.view.selected_instances()]
@@ -108,19 +122,39 @@ class MainWindow(QMainWindow):
     def record_change(self):
         self.history.record(self.project)
         self.update_title()
+        self.cavity_panel.refresh()
 
     def error(self, error):
         QMessageBox.warning(self,'AMCAD',str(error))
 
     def place(self, definition_id, x, y):
         try:
-            instance = self.project.add_instance(self.available_definitions[definition_id],x,y)
+            definition=self.library.definitions[definition_id] if self.library.is_custom(definition_id) else self.available_definitions[definition_id]
+            existing=self.project.definitions.get(definition.id)
+            if existing is not None and existing!=definition:
+                # Keep placed snapshots intact; a newly placed revision gets its own project definition.
+                from copy import deepcopy
+                from core.port import new_id
+                definition=deepcopy(definition);definition.id=new_id()
+            if definition_id=='generic-n':
+                count,ok=QInputDialog.getInt(self,'N-Port Generic','Number of ports',2,1,128)
+                if not ok:return
+                from core.generic import generic_component
+                definition=generic_component(count)
+            instance = self.project.add_instance(definition,x,y)
+            if definition.default_cavity_ref:
+                cavity=self.cavity_library.definitions.get(definition.default_cavity_ref)
+                try:
+                    if cavity is None:raise ValueError('Default cavity is missing; placed without assignment')
+                    self.project.assign_cavity(instance.id,cavity,definition.default_port_mapping)
+                except ValueError as error:self.statusBar().showMessage(str(error),10000)
             self.view.rebuild([instance.id]); self.record_change(); self.refresh_library()
         except (ValueError,KeyError) as error: self.error(error)
 
     def place_center(self,item):
         pos = self.view.mapToScene(self.view.viewport().rect().center())
-        self.place(item.data(Qt.UserRole),pos.x(),pos.y())
+        identifier=item.data(0,Qt.UserRole)
+        if identifier:self.place(identifier,pos.x(),pos.y())
 
     def add_junction(self, ways=3):
         # QAction passes its checked flag; retain the default three-way shortcut.
@@ -179,32 +213,81 @@ class MainWindow(QMainWindow):
         else: self.statusBar().showMessage('Select one component to edit its properties')
 
     def properties(self, instance_id):
-        instance = self.project.instances[instance_id]
-        dialog = QDialog(self); dialog.setWindowTitle('Component Properties')
-        form = QFormLayout(dialog)
-        name = QLineEdit(instance.name)
-        rotation = QComboBox(); rotation.addItems(['0','90','180','270']); rotation.setCurrentText(str(instance.rotation))
-        form.addRow('Definition',QLabel(self.project.definitions[instance.definition_id].name))
-        form.addRow('Persistent ID',QLabel(instance.id))
-        form.addRow('Name',name); form.addRow('Rotation (degrees)',rotation)
-        cavity=QPushButton('Assign Cavity…')
-        cavity.clicked.connect(lambda:self.assign_cavity(instance_id))
-        assigned=self.project.cavities.get(instance.cavity_ref)
-        form.addRow('Cavity',QLabel(assigned.name+' · '+self.cavity_library.status(self.project,assigned.id) if assigned else 'Unassigned'+(' · legacy embedded data available for import' if self.project.definitions[instance.definition_id].physical.cavity_type!='NONE' else '')))
-        form.addRow(cavity)
-        for node in self.project.nodes.values():
-            if node.instance_id==instance_id:
-                form.addRow(node.port_id,QLabel(node.id))
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        form.addRow(buttons)
-        buttons.rejected.connect(dialog.reject)
+        instance=self.project.instances[instance_id];definition=self.project.effective_definition(instance_id)
+        dialog=QDialog(self);dialog.setWindowTitle('Component Properties');dialog.resize(600,550)
+        form=QFormLayout(dialog);name=QLineEdit(instance.name);form.addRow('Definition',QLabel(definition.name));form.addRow('Name',name)
+        rotation=QComboBox();rotation.addItems(['0','90','180','270']);rotation.setCurrentText(str(instance.rotation));form.addRow('Rotation (degrees)',rotation)
+        count=QSpinBox();count.setRange(1,128);count.setValue(len(definition.ports));count.setEnabled(bool(definition.symbol.get('configurable_ports')));form.addRow('Port count',count)
+        table=QTableWidget(0,2);table.setObjectName('instancePorts');table.setHorizontalHeaderLabels(['Port label','Symbol edge']);form.addRow(table)
+        def rows(number):
+            from core.generic import resized_generic
+            candidate=resized_generic(definition,number) if number!=len(definition.ports) else definition
+            old=table.rowCount();table.setRowCount(number)
+            for row in range(old,number):
+                port=candidate.ports[row];item=QTableWidgetItem(port.display_name);item.setData(Qt.UserRole,port.id);table.setItem(row,0,item)
+                side=QComboBox();side.addItems(['LEFT','RIGHT','TOP','BOTTOM']);side.setCurrentText(port.side);table.setCellWidget(row,1,side)
+        rows(count.value());count.valueChanged.connect(rows)
+        status=QLabel();status.setObjectName('cavityAssignmentStatus');status.setWordWrap(True);form.addRow('Cavity',status)
+        assign=QPushButton('Assign Cavity…');remove=QPushButton('Remove Cavity Assignment');form.addRow(assign);form.addRow(remove)
+        def refresh_status():
+            current=self.project.instances[instance_id];cavity=self.project.cavities.get(current.cavity_ref)
+            status.setText(cavity.name+' · '+self.cavity_library.status(self.project,cavity.id) if cavity else 'Unassigned')
+            remove.setEnabled(bool(current.cavity_ref))
+        def assign_now():self.assign_cavity(instance_id);refresh_status()
+        def remove_now():self.remove_assignment(instance_id);refresh_status()
+        assign.clicked.connect(assign_now);remove.clicked.connect(remove_now);refresh_status()
+        save=QPushButton('Save as Library Component…');save.clicked.connect(lambda:self.save_component_instance(instance_id));form.addRow(save)
+        buttons=QDialogButtonBox(QDialogButtonBox.Ok|QDialogButtonBox.Cancel);form.addRow(buttons);buttons.rejected.connect(dialog.reject)
         def apply():
-            try: self.project.rename(instance_id,name.text())
-            except ValueError as error: self.error(error); return
-            instance.rotation=int(rotation.currentText()); dialog.accept()
-            self.view.rebuild([instance_id]); self.record_change()
-        buttons.accepted.connect(apply)
-        dialog.exec()
+            from copy import deepcopy
+            try:
+                candidate=deepcopy(self.project);candidate.rename(instance_id,name.text())
+                if count.isEnabled():candidate.resize_generic(instance_id,count.value())
+                names={table.item(r,0).data(Qt.UserRole):table.item(r,0).text().strip() for r in range(table.rowCount())}
+                sides={table.item(r,0).data(Qt.UserRole):table.cellWidget(r,1).currentText() for r in range(table.rowCount())}
+                candidate.configure_ports(instance_id,names,sides);candidate.instances[instance_id].rotation=int(rotation.currentText());candidate.update_geometry();candidate.validate()
+            except (ValueError,KeyError) as error:self.error(error);return
+            self.project=candidate;self.sync_project();self.view.rebuild([instance_id]);self.record_change();dialog.accept()
+        buttons.accepted.connect(apply);dialog.exec()
+
+    def remove_assignment(self,instance_id):
+        self.project.remove_cavity_assignment(instance_id);self.view.rebuild([instance_id]);self.record_change()
+
+    def rotate_instance(self,instance_id):
+        self.project.rotate(instance_id);self.view.rebuild([instance_id]);self.record_change()
+
+    def locate_cavity(self,cavity_id,instance_id=None):
+        usages=self.project.cavity_usage(cavity_id)
+        if not usages:self.statusBar().showMessage('This cavity is not used in the open schematic');return
+        if instance_id is None and len(usages)>1:
+            name,ok=QInputDialog.getItem(self,'Locate Cavity','Referencing component',[i.name for i in usages],editable=False)
+            if not ok:return
+            instance_id=next(i.id for i in usages if i.name==name)
+        instance_id=instance_id or usages[0].id
+        self.view.scene().clearSelection();item=self.view.component_items[instance_id];item.setSelected(True);self.view.centerOn(item)
+
+    def open_component_library(self):
+        from ui.component_manager import ComponentLibraryDialog
+        ComponentLibraryDialog(self).exec()
+
+    def save_selected_component(self):
+        ids=self.view.selected_instances()
+        if len(ids)!=1:raise ValueError('Select one schematic component')
+        self.save_component_instance(ids[0])
+
+    def save_component_instance(self,instance_id):
+        from core.port import new_id
+        from core.cavity import PhysicalDefinition
+        instance=self.project.instances[instance_id];definition=self.project.effective_definition(instance_id)
+        name,ok=QInputDialog.getText(self,'Save Library Component','Reusable definition name',text=definition.name)
+        if not ok:return
+        definition.id=new_id();definition.name=name.strip();definition.revision=1;definition.physical=PhysicalDefinition()
+        definition.default_cavity_ref=None;definition.default_port_mapping={}
+        if instance.cavity_ref and QMessageBox.question(self,'Default Cavity','Include current cavity reference and port mapping as defaults?',QMessageBox.Yes|QMessageBox.No)==QMessageBox.Yes:
+            from copy import deepcopy
+            definition.default_cavity_ref=instance.cavity_ref;definition.default_port_mapping=deepcopy(instance.port_mapping)
+        try:self.library.save(definition);self.refresh_library()
+        except (ValueError,OSError) as error:self.error(error)
 
     def open_cavity_library(self):
         from ui.cavity_library import CavityLibraryDialog

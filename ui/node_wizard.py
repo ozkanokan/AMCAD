@@ -11,10 +11,11 @@ from ui.geometry import port_positions
 
 class NodeWizard(QDialog):
     """Create reusable definitions; side/order is the V1 symbol layout."""
-    def __init__(self,parent=None):
+    def __init__(self,parent=None,source=None):
         super().__init__(parent)
         self.setWindowTitle('New Component — Port / Node Wizard')
         self.resize(860,760)
+        self.source=source
         self.definition = None
         self.definition_id = new_id()
         self.updating = False
@@ -23,7 +24,7 @@ class NodeWizard(QDialog):
         self.name=QLineEdit(); self.name.setPlaceholderText('EHSV or Relief Valve')
         self.prefix=QLineEdit(); self.prefix.setPlaceholderText('EHSV or RV')
         self.category=QLineEdit('Valves')
-        self.count=QSpinBox(); self.count.setRange(1,32); self.count.setValue(2)
+        self.count=QSpinBox(); self.count.setRange(1,128); self.count.setValue(2)
         form.addRow('Component Name',self.name); form.addRow('Component Prefix',self.prefix)
         form.addRow('Category',self.category); form.addRow('Number of Hydraulic Ports',self.count)
         root.addLayout(form)
@@ -57,13 +58,25 @@ class NodeWizard(QDialog):
         self.ports.itemChanged.connect(self.update_preview)
         self.name.textChanged.connect(self.update_preview)
         self.set_port_count(2)
+        if source:
+            self.definition_id=source.id;self.count.setValue(len(source.ports));self.updating=True
+            self.name.setText(source.name);self.prefix.setText(source.prefix);self.category.setText(source.category)
+            for row,port in enumerate(source.ports):
+                for col,value in enumerate((port.id,port.display_name,port.port_type)):
+                    self.ports.item(row,col).setText(value)
+                for col,value in ((3,port.flow_direction),(4,port.side),(5,'Required' if port.required else 'Optional')):
+                    self.ports.cellWidget(row,col).setCurrentText(value)
+            for relationship in source.internal_relationships:
+                self.add_relationship();row=self.relationships.rowCount()-1
+                for col,key in enumerate(('from_port_id','to_port_id','relationship')):self.relationships.item(row,col).setText(relationship[key])
+            self.updating=False;self.update_preview()
 
     def set_port_count(self,count):
         self.updating=True
         old=self.ports.rowCount()
         self.ports.setRowCount(count)
         for row in range(old,count):
-            for column,text in enumerate((f'p{row+1}',f'P{row+1}','HYDRAULIC')):
+            for column,text in enumerate((f'p{row+1}',f'Port {row+1}','HYDRAULIC')):
                 self.ports.setItem(row,column,QTableWidgetItem(text))
             flow=QComboBox(); flow.addItems(['UNSPECIFIED','IN','OUT','BIDIRECTIONAL'])
             side=QComboBox(); side.addItems(['LEFT','RIGHT','TOP','BOTTOM'])
@@ -93,16 +106,22 @@ class NodeWizard(QDialog):
         # Grow the generic symbol for components with many ports.
         vertical=max(sum(p.side==s for p in ports) for s in ['LEFT','RIGHT'])
         horizontal=max(sum(p.side==s for p in ports) for s in ['TOP','BOTTOM'])
-        return ComponentDefinition(self.definition_id,self.name.text().strip(),self.prefix.text().strip(),
+        result=ComponentDefinition(self.definition_id,self.name.text().strip(),self.prefix.text().strip(),
                                    self.category.text().strip(),ports,
-                                   symbol={'kind':'box','width':min(1000,max(140,horizontal*45)),'height':max(90,vertical*30)},
+                                   symbol={'kind':'box','width':min(1000,max(140,horizontal*45)),'height':min(1000,max(90,vertical*30))},
                                    internal_relationships=relationships, physical=PhysicalDefinition())
+        if self.source:
+            from copy import deepcopy
+            result.symbol=deepcopy(self.source.symbol);result.revision=self.source.revision;result.physical=deepcopy(self.source.physical)
+            result.default_cavity_ref=self.source.default_cavity_ref;result.default_port_mapping=deepcopy(self.source.default_port_mapping)
+        return result
 
     def update_preview(self,*args):
         if self.updating: return
         self.scene.clear()
         d=self.build_definition()
-        w=d.symbol['width']; h=d.symbol['height']
+        from core.symbol_layout import symbol_dimensions
+        w,h=symbol_dimensions(d)
         pen=QPen(QColor('#42576a'),1.5)
         self.scene.addRect(-w/2,-h/2,w,h,pen,QColor('white'))
         title=self.scene.addText(d.name or 'Component',QFont('Sans Serif',10))

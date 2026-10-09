@@ -1,11 +1,12 @@
-# V1.5 project and graph contracts
+# V1.6 project and graph contracts
 
 Formats are UTF-8 JSON with `schema` and integer `schema_version`. Current
-version is **6**. Version 1/2 projects migrate topology explicitly on load.
+version is **7**. Version 1/2 projects migrate topology explicitly on load.
 Version 4 physical profiles load unchanged; missing 3D interface fields use legacy
 fixed-position AXIAL/RADIAL interpretation. Anchored fields are documented in
 [cavity-surface.md](cavity-surface.md). Meshes are not persisted.
-Version 3 keeps its geometry and gains NONE physical definitions when absent. Graph exports
+Versions 3–6 retain manual controls; endpoint adapters are recalculated in memory
+using the shared symbol layout. Missing physical definitions default to NONE. Graph exports
 are output-only. Unsupported versions are rejected. Save validates and atomically
 replaces its target using a temporary sibling file; load completes before
 replacing the active project.
@@ -16,7 +17,7 @@ replacing the active project.
 | --- | --- |
 | `project` | Persistent project ID and name |
 | `component_definitions` | Embedded definitions |
-| `component_instances` | UUID, definition ID, name, x/y, rotation, cavity_ref and port_mapping |
+| `component_instances` | UUID, definition ID, name, x/y, rotation, cavity_ref, port_mapping, port_names and port_sides |
 | `cavity_definitions` | Portable snapshots of independent referenced cavity definitions |
 | `nodes` | UUID, instance UUID, definition-local port ID, kind |
 | `connections` | Logical references plus independent `schematic_geometry` |
@@ -132,3 +133,28 @@ assigned. Explicit per-instance import creates an idempotent independent library
 without changing connectivity or instance IDs. See [cavity-library.md](cavity-library.md)
 for deterministic migration IDs, strict assignment validation, snapshot fallback, revision
 mismatches and safe library ownership. Loading snapshots never overwrites the library.
+
+## V1.6 symbol/library metadata
+
+Instance `port_names` and `port_sides` are dictionaries keyed by persistent
+definition-local port IDs, defaulting to `{}` for older files. They affect display
+and endpoint placement only. Node and connection references retain their IDs.
+Generic count changes create an independent definition for that instance, retain
+surviving port/node IDs, and reject removal of occupied ports or count changes
+while a cavity is assigned.
+
+Component definitions add `revision` (default 1), `default_cavity_ref` (default
+null), and `default_port_mapping` (default {}). Default assignments contain only
+references, never cavity geometry. Newly saved reusable components use physical
+NONE; archived physical data in older definitions remains compatible. Editing a
+library definition does not update existing project snapshots automatically.
+Placing a changed revision into a project that already holds its older revision
+creates an independent project definition ID for the new placement.
+
+Both libraries use separate `categories.json` organization metadata with schema
+`amcad.library.categories`, nested slash-separated category paths and entry-ID
+associations. Category operations do not rewrite definition JSON or change
+cavity revisions. Startup only reads files. Display annotations/thumbnails are
+derived and are not authoritative stored geometry. Graph nodes include readable
+`display_label`; `label` uses instance display labels for component ports and
+the instance name for external terminals. Logical `port_id` remains authoritative.

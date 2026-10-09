@@ -17,6 +17,10 @@ class ComponentDefinition:
     keepout_cad_path: str | None = None
     physical: PhysicalDefinition = field(default_factory=PhysicalDefinition)
 
+    revision: int = 1
+    default_cavity_ref: str | None = None
+    default_port_mapping: dict[str,str] = field(default_factory=dict)
+
     def validate(self):
         if not all(isinstance(v, str) and v.strip() for v in (self.id, self.name, self.prefix, self.category)):
             raise ValueError("Definition ID, name, prefix and category are required")
@@ -26,12 +30,22 @@ class ComponentDefinition:
         for p in self.ports:
             if not isinstance(p.required, bool):
                 raise ValueError("Port required must be true or false")
-            if not p.id.strip() or not p.display_name.strip() or not p.port_type.strip():
+            if not all(isinstance(v,str) and v.strip() for v in (p.id,p.display_name,p.port_type)):
                 raise ValueError("Port ID, display name and type are required")
             if p.side not in {"LEFT", "RIGHT", "TOP", "BOTTOM"}:
                 raise ValueError("Invalid port side")
             if p.flow_direction not in {"IN", "OUT", "BIDIRECTIONAL", "UNSPECIFIED"}:
                 raise ValueError("Invalid flow direction")
+        if not isinstance(self.revision, int) or self.revision < 1:
+            raise ValueError("Invalid component revision")
+        if self.default_cavity_ref is None and self.default_port_mapping:
+            raise ValueError("Default mapping requires a cavity reference")
+        if self.default_cavity_ref is not None:
+            if not isinstance(self.default_cavity_ref,str) or not self.default_cavity_ref:
+                raise ValueError("Invalid default cavity reference")
+            values=list(self.default_port_mapping.values())
+            if any(not isinstance(v,str) or not v for v in values) or set(self.default_port_mapping)!=set(ids) or len(set(values))!=len(ids):
+                raise ValueError("Default cavity mapping must be complete and unique")
         kind = self.symbol.get("kind", "box")
         if kind not in {"box", "external", "junction"}:
             raise ValueError("Unsupported symbol kind")

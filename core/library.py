@@ -7,14 +7,20 @@ from core.project import write_json
 BUILTINS = Path(__file__).resolve().parents[1] / 'library' / 'components' / 'generic.json'
 
 
-class ComponentLibrary:
+from copy import deepcopy
+from core.library_categories import LibraryCategories
+
+
+class ComponentLibrary(LibraryCategories):
     def __init__(self, directory=None):
-        self.directory = Path(directory) if directory else Path(os.environ.get('XDG_DATA_HOME', Path.home() / '.local/share')) / 'amcad/components'
+        from core.cavity_library import default_cavity_directory
+        self.directory=Path(directory) if directory is not None else Path(os.environ['AMCAD_COMPONENT_LIBRARY']).expanduser() if os.environ.get('AMCAD_COMPONENT_LIBRARY') else default_cavity_directory().parent/'components'
         self.definitions = {d.id: d for d in (ComponentDefinition.from_dict(v) for v in json.loads(BUILTINS.read_text()))}
         self.errors = []
         self.paths = {}
         if self.directory.exists():
             for path in sorted(self.directory.glob('*.json')):
+                if path.name=='categories.json':continue
                 try:
                     definition = ComponentDefinition.from_dict(json.loads(path.read_text(encoding='utf-8')))
                     if definition.id in self.definitions:
@@ -24,7 +30,10 @@ class ComponentLibrary:
                 except (ValueError, TypeError, KeyError, OSError) as error:
                     self.errors.append(f'{path.name}: {error}')
 
+        self.load_categories()
+
     def save(self, definition):
+        definition=deepcopy(definition)
         definition.validate()
         if definition.id in self.definitions:
             raise ValueError('Definition ID already exists')
@@ -40,8 +49,18 @@ class ComponentLibrary:
         return definition_id in self.paths
 
     def update(self, definition):
+        definition=deepcopy(definition)
         definition.validate()
         if not self.is_custom(definition.id):
             raise ValueError('Built-in definitions are templates; save a custom definition instead')
+        old=self.definitions[definition.id]
+        if definition.revision!=old.revision:raise ValueError("Component revision changed; reopen before saving")
+        if definition==old:return deepcopy(old)
+        definition.revision+=1
         write_json(self.paths[definition.id],definition.to_dict())
         self.definitions[definition.id]=definition
+
+    def delete(self,definition_id,project):
+        if not self.is_custom(definition_id):raise ValueError('Built-in templates cannot be deleted')
+        if any(i.definition_id==definition_id for i in project.instances.values()):raise ValueError('Component is used by the open project')
+        self.paths[definition_id].unlink();del self.paths[definition_id];del self.definitions[definition_id]

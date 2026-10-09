@@ -1,5 +1,24 @@
 [
   {
+    "id": "generic-n",
+    "name": "N-Port Generic",
+    "prefix": "G",
+    "category": "Generic",
+    "ports": [
+      {
+        "id": "p1",
+        "display_name": "Port 1",
+        "side": "LEFT"
+      }
+    ],
+    "symbol": {
+      "kind": "box",
+      "width": 110,
+      "height": 76,
+      "configurable_ports": true
+    }
+  },
+  {
     "id": "external-port",
     "name": "External Port",
     "prefix": "EXT",
@@ -27,15 +46,21 @@
     "ports": [
       {
         "id": "i",
-        "display_name": "IN",
+        "display_name": "Port 1",
         "side": "LEFT"
       },
       {
         "id": "o",
-        "display_name": "OUT",
+        "display_name": "Port 2",
         "side": "RIGHT"
       }
-    ]
+    ],
+    "symbol": {
+      "kind": "box",
+      "width": 110,
+      "height": 76,
+      "configurable_ports": true
+    }
   },
   {
     "id": "generic-4",
@@ -45,25 +70,31 @@
     "ports": [
       {
         "id": "P",
-        "display_name": "P",
+        "display_name": "Port 1",
         "side": "TOP"
       },
       {
         "id": "R",
-        "display_name": "R",
+        "display_name": "Port 2",
         "side": "BOTTOM"
       },
       {
         "id": "C1",
-        "display_name": "C1",
+        "display_name": "Port 3",
         "side": "LEFT"
       },
       {
         "id": "C2",
-        "display_name": "C2",
+        "display_name": "Port 4",
         "side": "RIGHT"
       }
-    ]
+    ],
+    "symbol": {
+      "kind": "box",
+      "width": 110,
+      "height": 76,
+      "configurable_ports": true
+    }
   },
   {
     "id": "junction-3",

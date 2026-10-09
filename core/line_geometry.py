@@ -4,7 +4,8 @@ from core.geometry import SIDE_VECTORS, LEAD_LENGTH, rotated_side, wire_points
 
 
 def local_port_positions(definition):
-    w, h = definition.symbol.get('width',110), definition.symbol.get('height',76)
+    from core.symbol_layout import symbol_dimensions
+    w,h = symbol_dimensions(definition)
     if definition.symbol.get('kind') == 'external':
         p=definition.ports[0]; vx,vy=SIDE_VECTORS[p.side]
         return {p.id:(vx*w/2,vy*h/2)}
@@ -19,7 +20,7 @@ def local_port_positions(definition):
 
 def endpoint(project,node_id):
     node=project.nodes[node_id]; instance=project.instances[node.instance_id]
-    definition=project.definitions[instance.definition_id]
+    definition=project.effective_definition(instance.id)
     port=next(p for p in definition.ports if p.id==node.port_id)
     x,y=local_port_positions(definition)[port.id]
     x,y=[(x,y),(-y,x),(-x,-y),(y,-x)][int(instance.rotation)//90]

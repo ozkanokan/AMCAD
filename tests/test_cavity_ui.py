@@ -129,7 +129,7 @@ def test_physical_demo_launch_graph_and_existing_c1_r_preserved(qapp,tmp_path):
     assert definition.physical.cavity_type=='REVOLVED_PROFILE'
     assert {i.hydraulic_port_id for i in definition.physical.hydraulic_interfaces}=={'IN','OUT'}
     assert all(p.is_complete(i.id) for i in p.instances.values())
-    assert p.to_dict()['schema_version']==6
+    assert p.to_dict()['schema_version']==7
     assert export_graph(p)==json.loads((ROOT/'examples/parallel_check_valves.graph.json').read_text())
     assert sum(d['physical']['cavity_type']=='REVOLVED_PROFILE' for d in export_graph(p)['component_definitions'])==1
     w=MainWindow(tmp_path/'library'); w.load_path(demo); w.show(); qapp.processEvents()

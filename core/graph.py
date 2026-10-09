@@ -8,10 +8,10 @@ def export_graph(project):
     nodes = []
     for n in project.nodes.values():
         i = project.instances[n.instance_id]
-        d = project.definitions[i.definition_id]
+        d = project.effective_definition(i.id)
         port = next(p for p in d.ports if p.id == n.port_id)
-        label = i.name if n.kind == "external_port" else f"{i.name}.{n.port_id}"
-        nodes.append({**asdict(n), "label": label, "port_type": port.port_type,
+        label = i.name if n.kind == "external_port" else f"{i.name}.{port.display_name}"
+        nodes.append({**asdict(n), "label": label, "display_label":port.display_name, "port_type": port.port_type,
                       "flow_direction": port.flow_direction, "required": port.required})
     internal = []
     for i in project.instances.values():
@@ -20,13 +20,14 @@ def export_graph(project):
                              "from_node_id": project.node_for(i.id, r["from_port_id"]).id,
                              "to_node_id": project.node_for(i.id, r["to_port_id"]).id,
                              "relationship": r.get("relationship", "UNSPECIFIED")})
-    return {"schema": "amcad.hydraulic_graph", "schema_version": 6,
+    return {"schema": "amcad.hydraulic_graph", "schema_version": 7,
             "component_definitions": [d.to_dict() for d in project.definitions.values()],
             "cavity_definitions": [c.to_dict() for c in project.cavities.values()],
             "project": dict(project.metadata),
             "component_instances": [{"id": i.id, "name": i.name, "definition_id": i.definition_id,
                                       "definition_name": project.definitions[i.definition_id].name,
-                                      "cavity_ref":i.cavity_ref,"port_mapping":dict(i.port_mapping)}
+                                      "cavity_ref":i.cavity_ref,"port_mapping":dict(i.port_mapping),
+                                      "port_names":dict(i.port_names),"port_sides":dict(i.port_sides)}
                                      for i in project.instances.values()],
             "nodes": nodes, "junctions": [n.id for n in project.nodes.values() if n.kind == "junction"],
             "junction_instances": [{"id": i.id, "name": i.name,

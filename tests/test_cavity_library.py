@@ -184,7 +184,7 @@ def test_graph_exports_assignments_without_changing_connectivity():
     p=Project();d=component();a=p.add_instance(d);b=p.add_instance(d,x=200);p.connect(p.node_for(a.id,'P0').id,p.node_for(b.id,'P0').id)
     before=export_graph(p);c=cavity();p.assign_cavity(a.id,c,mapping(c));after=export_graph(p)
     assert after['routing_connections']==before['routing_connections'] and after['nodes']==before['nodes']
-    assert after['schema_version']==6 and after['component_instances'][0]['cavity_ref']==c.id
+    assert after['schema_version']==7 and after['component_instances'][0]['cavity_ref']==c.id
     assert after['cavity_definitions']==[c.to_dict()]
 
 

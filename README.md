@@ -1,8 +1,10 @@
-# AMCAD — Hydraulic Manifold Schematic Editor (V1.5)
+# AMCAD — Hydraulic Manifold Schematic Editor (V1.6)
 
 A standalone Python / PySide6 desktop editor for hydraulic schematics and their
-graph foundation. V1.5 adds an independent reusable Cavity Library and instance-specific
-assignments to the existing axisymmetric cavity sketcher, with
+graph foundation. V1.6 adds configurable N-Port Generic components, editable instance
+port labels/edges, reusable component defaults, nested library categories and dockable
+library panels. Explicit cavity assignment, usage/locate actions and port alignment
+guides build on the existing axisymmetric cavity sketcher, with
 synchronized YZ/XZ/XY/ISO views, surface-anchored hydraulic ports, arbitrary 3D
 channel directions and circle/slot/rectangle channel previews. The point table,
 Draw/Edit modes, parametric corners and engineering leaders remain available.
@@ -41,7 +43,7 @@ QT_QPA_PLATFORM=offscreen python -m pytest -q
 QT_QPA_PLATFORM=offscreen python -m app.main examples/c1_r.amcad.json --smoke
 ```
 
-All **247 tests** and all three sample application launch checks pass on Python 3.14.4 under
+All **353 tests** and all five sample application launch checks pass on Python 3.14.4 under
 Linux. Tests exercise the wizard, drag/drop, manual drawing, segment and bend
 drags, rotation, single-line occupancy, geometry persistence, undo/redo,
 copy/paste, legacy migration, completeness, crossings and graph export. Cavity tests cover
@@ -58,11 +60,18 @@ executable packaging have not been validated.
 
 ## Editing
 
-- The Component Library is docked on the **right**. Drag components onto the
-  canvas, or double-click a library entry to place at the view center.
+- Component and Cavity Libraries share tabbed docks on the **right**. Use View to
+  show/hide either dock independently. Drag a component symbol onto the canvas or
+  double-click to place it. Both library menus open their full managers.
+- N-Port Generic asks for 1–128 ports. Component Properties edits each instance’s
+  port labels, four-edge layout and generic count. Connected ports cannot be
+  removed; remove a cavity assignment before changing the count.
+- Single-component drags use temporary port-first alignment guides with a six-pixel
+  magnetic tolerance, followed by center alignment. The grid is visual only.
+- See [V1.6 library workflow and local testing](docs/library-ux-v16.md).
 - Drag component bodies to move. Click to select, Ctrl-click to extend selection,
   or drag empty canvas for a selection rectangle. Double-click a component or
-  press F2 for its name/orientation and persistent IDs.
+  press F2 for its name, orientation, port labels/edges and cavity assignment.
 - **Draw Line:** click a free port. A dashed live preview follows the cursor on
   the current horizontal/vertical axis. Click empty canvas to fix a bend and
   turn 90 degrees; repeat as needed. Click a free target port to finish.
@@ -316,11 +325,12 @@ UUIDs. Manual visual geometry is separate, under `schematic_geometry`, and is
 excluded from logical graph export. Junction ports share internal `JUNCTION`
 relationships, preserving the common hydraulic net without extra physical lines.
 
-Project/graph schema version **6** adds independent cavity snapshots and instance
-references/mappings. Version 5 added anchored 3D hydraulic-interface parameters.
+Project/graph schema version **7** adds instance port-name/side overrides and
+component revision/default-assignment metadata. Version 6 added independent cavity
+snapshots and instance references/mappings. Version 5 added anchored 3D hydraulic-interface parameters.
 Version 4 introduced definition-level physical data; version 3
-introduced manual geometry and required-port metadata. Version 3 loads without
-changing its manual geometry; missing physical data defaults to NONE.
+introduced manual geometry and required-port metadata. Older schemas retain manual controls and recompute endpoint adapters in memory
+for the shared symbol layout; missing physical data defaults to NONE.
 Version 1/2 projects migrate deterministically on load. With the authorized
 legacy migration, multiple historical lines on a component/external port are
 converted into explicit bounded junctions, preserving the net. This happens only

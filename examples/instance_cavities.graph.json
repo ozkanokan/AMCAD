@@ -1,6 +1,6 @@
 {
   "schema": "amcad.hydraulic_graph",
-  "schema_version": 6,
+  "schema_version": 7,
   "component_definitions": [
     {
       "id": "external-port",
@@ -32,7 +32,10 @@
         "cavity_type": "NONE",
         "cavity_profile": null,
         "hydraulic_interfaces": []
-      }
+      },
+      "revision": 1,
+      "default_cavity_ref": null,
+      "default_port_mapping": {}
     }
   ],
   "cavity_definitions": [
@@ -292,7 +295,9 @@
       "cavity_ref": "73c0160f-876f-401e-b36c-4a7a06772bf6",
       "port_mapping": {
         "port": "f5cdbf16-e14d-4c45-8e1c-bdfb0a1b2b74"
-      }
+      },
+      "port_names": {},
+      "port_sides": {}
     },
     {
       "id": "e6a2f648-861f-454c-ab7c-207faaa22aa7",
@@ -302,7 +307,9 @@
       "cavity_ref": "47d8b193-ff06-447f-8e2a-8b3962df7f0c",
       "port_mapping": {
         "port": "85261d18-fb39-4eaa-a16f-9cb349b01a8a"
-      }
+      },
+      "port_names": {},
+      "port_sides": {}
     }
   ],
   "nodes": [
@@ -312,6 +319,7 @@
       "port_id": "port",
       "kind": "external_port",
       "label": "R",
+      "display_label": "Port",
       "port_type": "HYDRAULIC",
       "flow_direction": "UNSPECIFIED",
       "required": true
@@ -322,6 +330,7 @@
       "port_id": "port",
       "kind": "external_port",
       "label": "RET",
+      "display_label": "Port",
       "port_type": "HYDRAULIC",
       "flow_direction": "UNSPECIFIED",
       "required": true

@@ -76,11 +76,11 @@ def test_library_instance_assignment_independent_replacement_and_remove(qapp,tmp
         ca=w.cavity_library.save(cavity('A'));cb=w.cavity_library.save(cavity('B'))
         for i,c in ((a,ca),(b,cb)):
             manager=CavityLibraryDialog(w,i.id);manager.refresh(c.id)
-            modal(manager.assign,lambda d:d.submit())
+            modal(manager.assign,lambda d:(next(iter(d.controls.values())).setCurrentIndex(1),d.submit()))
             assert w.project.instances[i.id].cavity_ref==c.id
             manager.reject()
         assert a.cavity_ref!=b.cavity_ref
-        manager=CavityLibraryDialog(w,b.id);manager.refresh(ca.id);modal(manager.assign,lambda d:d.submit())
+        manager=CavityLibraryDialog(w,b.id);manager.refresh(ca.id);modal(manager.assign,lambda d:(next(iter(d.controls.values())).setCurrentIndex(1),d.submit()))
         assert a.cavity_ref==b.cavity_ref==ca.id and len(w.project.cavity_usage(ca.id))==2
         manager.delete();assert 'used' in manager.feedback.text() and ca.id in w.cavity_library.definitions
         manager.remove_assignment();assert b.cavity_ref is None and a.cavity_ref==ca.id
@@ -206,7 +206,7 @@ def test_create_new_cavity_and_assign_after_save(qapp,tmp_path,monkeypatch):
     # Mapping-dialog mouse/selection validation is tested above. Here automate only
     # its modal entry to verify the two-dialog New -> Save -> Assign composition.
     def accept_mapping(dialog):
-        dialog.submit();return dialog.result()
+        next(iter(dialog.controls.values())).setCurrentIndex(1);dialog.submit();return dialog.result()
     monkeypatch.setattr(PortMappingDialog,'exec',accept_mapping)
     try:
         def fill(e):

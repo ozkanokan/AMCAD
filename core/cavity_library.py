@@ -17,17 +17,23 @@ def default_cavity_directory():
     return base/'amcad/cavities'
 
 
-class CavityLibrary:
+from core.library_categories import LibraryCategories
+
+
+class CavityLibrary(LibraryCategories):
     def __init__(self,directory=None):
         self.directory=Path(directory) if directory is not None else default_cavity_directory()
         self.definitions={};self.paths={};self.errors=[]
         if self.directory.exists():
             for path in sorted(self.directory.glob('*.json')):
+                if path.name=='categories.json':continue
                 try:
                     cavity=CavityDefinition.from_dict(json.loads(path.read_text(encoding='utf-8')))
                     if cavity.id in self.definitions:raise ValueError('Duplicate cavity ID')
                     self.definitions[cavity.id]=cavity;self.paths[cavity.id]=path
                 except (ValueError,TypeError,KeyError,OSError) as error:self.errors.append(f'{path.name}: {error}')
+
+        self.load_categories()
 
     def save(self,cavity,allow_legacy=False):
         cavity=deepcopy(cavity).validate(strict=not allow_legacy)

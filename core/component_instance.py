@@ -12,3 +12,5 @@ class ComponentInstance:
     id: str = field(default_factory=new_id)
     cavity_ref: str | None = None
     port_mapping: dict[str,str] = field(default_factory=dict)
+    port_names: dict[str,str] = field(default_factory=dict)
+    port_sides: dict[str,str] = field(default_factory=dict)

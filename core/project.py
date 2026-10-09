@@ -13,7 +13,7 @@ from core.connection import Connection
 from core.port import Node, new_id
 from core.line_geometry import endpoint, routed_geometry, validate_geometry
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 
 def write_json(path, data):
@@ -41,6 +41,50 @@ class Project:
         self.nodes = {}
         self.connections = {}
         self.cavities = {}
+
+    def effective_definition(self, instance_id):
+        instance=self.instances[instance_id]
+        definition=deepcopy(self.definitions[instance.definition_id])
+        if definition.id in ('generic-2','generic-4','generic-n'):
+            definition.symbol['configurable_ports']=True
+        ids={p.id for p in definition.ports}
+        if not isinstance(instance.port_names,dict) or not isinstance(instance.port_sides,dict) or (set(instance.port_names)|set(instance.port_sides))-ids:
+            raise ValueError('Port overrides reference unknown port IDs')
+        for port in definition.ports:
+            port.display_name=instance.port_names.get(port.id,port.display_name)
+            port.side=instance.port_sides.get(port.id,port.side)
+        return definition.validate()
+
+    def configure_ports(self, instance_id, names, sides):
+        instance=self.instances[instance_id]
+        previous=(instance.port_names,instance.port_sides)
+        instance.port_names=deepcopy(names);instance.port_sides=deepcopy(sides)
+        try:self.effective_definition(instance_id)
+        except (ValueError,TypeError,AttributeError):
+            instance.port_names,instance.port_sides=previous
+            raise ValueError('Port labels must be nonempty and sides must be valid')
+        self.update_geometry()
+
+    def resize_generic(self, instance_id, count):
+        from core.generic import resized_generic
+        instance=self.instances[instance_id];old=self.effective_definition(instance_id)
+        if not old.symbol.get('configurable_ports'):raise ValueError('This component has a fixed port count')
+        if count==len(old.ports):return
+        if instance.cavity_ref:raise ValueError('Remove the cavity assignment before changing the port count')
+        definition=resized_generic(old,count)
+        removed={p.id for p in old.ports}-{p.id for p in definition.ports}
+        for pid in removed:
+            node=self.node_for(instance_id,pid)
+            if any(node.id in (c.from_node_id,c.to_node_id) for c in self.connections.values()):
+                raise ValueError('Disconnect occupied ports before removing them')
+        self.add_definition(definition);instance.definition_id=definition.id
+        self.nodes={key:node for key,node in self.nodes.items() if not (node.instance_id==instance_id and node.port_id in removed)}
+        for port in definition.ports:
+            if not any(n.instance_id==instance_id and n.port_id==port.id for n in self.nodes.values()):
+                node=Node(new_id(),instance_id,port.id);self.nodes[node.id]=node
+        instance.port_names={k:v for k,v in instance.port_names.items() if k not in removed}
+        instance.port_sides={k:v for k,v in instance.port_sides.items() if k not in removed}
+        self.update_geometry()
 
     def cavity_usage(self,cavity_id):
         return [i for i in self.instances.values() if i.cavity_ref==cavity_id]
@@ -220,6 +264,8 @@ class Project:
         for old in data["instances"]:
             instance = self.add_instance(self.definitions[old["definition_id"]], old["x"] + offset, old["y"] + offset)
             instance.rotation = old["rotation"]
+            instance.port_names = deepcopy(old.get("port_names",{}))
+            instance.port_sides = deepcopy(old.get("port_sides",{}))
             if old.get("cavity_ref"):
                 cavity_id=old["cavity_ref"]
                 cavity=self.cavities.get(cavity_id) or cavities.get(cavity_id)
@@ -256,7 +302,7 @@ class Project:
                 raise ValueError("Rotation must be 0, 90, 180 or 270")
             if not all(isinstance(v, (int, float)) and math.isfinite(v) for v in (i.x, i.y)):
                 raise ValueError("Invalid schematic position")
-            expected = {p.id for p in self.definitions[i.definition_id].ports}
+            expected = {p.id for p in self.effective_definition(i.id).ports}
             actual = [n.port_id for n in self.nodes.values() if n.instance_id == i.id]
             if len(actual) != len(expected) or set(actual) != expected:
                 raise ValueError("Instance ports and nodes do not match")
@@ -309,7 +355,7 @@ class Project:
     def from_dict(cls, data):
         if not isinstance(data, dict):
             raise ValueError("Project JSON must be an object")
-        if data.get("schema") != "amcad.project" or data.get("schema_version") not in (1, 2, 3, 4, 5, SCHEMA_VERSION):
+        if data.get("schema") != "amcad.project" or data.get("schema_version") not in (1, 2, 3, 4, 5, 6, SCHEMA_VERSION):
             raise ValueError("Unsupported project schema/version")
         if data["schema_version"] == 1:
             from core.migration import migrate_v1
@@ -333,7 +379,9 @@ class Project:
                 target[item.id] = item
         if set(data["junctions"]) != {n.id for n in p.nodes.values() if n.kind == "junction"}:
             raise ValueError("Junction index disagrees with nodes")
-        if legacy:
+        if legacy or data["schema_version"] < 7:
+            if not legacy:
+                for connection in p.connections.values():validate_geometry(connection.schematic_geometry)
             p.update_geometry()
         return p.validate()
 

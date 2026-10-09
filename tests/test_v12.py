@@ -284,7 +284,10 @@ def test_vertical_segment_drag_and_translated_copy(qapp,tmp_path):
 
 def test_short_straight_line_is_still_editable(qapp,tmp_path):
     p,a,b,source,target=make_pair(tmp_path)
-    b.x=a.x+150; b.y=a.y
+    from core.symbol_layout import symbol_dimensions
+    width,_=symbol_dimensions(p.effective_definition(a.id))
+    target_width,_=symbol_dimensions(p.effective_definition(b.id))
+    b.x=a.x+(width+target_width)/2+40; b.y=a.y
     c=p.connect(source,target)
     assert len(c.schematic_geometry['points'])==3
     w=MainWindow(tmp_path/'library'); w.project=p; w.history=ProjectHistory(p); w.sync_project()

@@ -45,7 +45,7 @@ QT_QPA_PLATFORM=offscreen python -m pytest -q
 QT_QPA_PLATFORM=offscreen python -m app.main examples/c1_r.amcad.json --smoke
 ```
 
-All **391 tests** and all five sample application launch checks pass on Python 3.14.4 under
+All **406 tests** and all five sample application launch checks pass on Python 3.14.4 under
 Linux. Tests exercise the wizard, drag/drop, manual drawing, segment and bend
 drags, rotation, single-line occupancy, geometry persistence, undo/redo,
 copy/paste, legacy migration, completeness, crossings and graph export. Cavity tests cover
@@ -363,3 +363,13 @@ new AMCAD dependencies. Routing, optimization and manifold Booleans remain outsi
 this phase. Cloud checks validate the export/placement contract and actual
 OpenNURBS solids using McNeel's SDK; native Rhino/Grasshopper UI execution requires
 local verification described in the guide.
+
+## Grasshopper Phase 2 — placement controller
+
+The [Phase 2 controller](integrations/grasshopper/PHASE2.md) adds a separate GH
+Python 3 component with a searchable native Rhino/Eto instance selector and six
+placement fields shared across all cavities. Apply edits only the selected stable
+instance ID; Save/Reload uses the existing Phase 1 placement JSON schema. Seven-,
+20- and 50-instance regression workflows verify independence and persistence.
+Phase 1 geometry and saved definitions remain compatible; no routing or optimization
+is added. The guide includes exact component wiring and a local native host check.

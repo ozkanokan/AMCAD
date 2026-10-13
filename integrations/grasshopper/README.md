@@ -168,3 +168,9 @@ Cloud validation covers export, placement, Python 3.9 syntax compatibility and
 actual OpenNURBS solids/arcs/transforms. **Rhino 8 / Grasshopper UI execution is not
 available in the cloud and must be checked locally.** No automatic routing,
 optimization, manifold Booleans, channel solids or placement constraints are added.
+
+## Phase 2 — single-instance placement controller
+
+For a searchable native instance picker and one six-field editor, use the separate
+[Phase 2 setup guide](PHASE2.md) and `controller_component.py`. Existing Phase 1
+components, geometry, inputs/outputs and placement schema remain unchanged.

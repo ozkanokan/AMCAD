@@ -1,0 +1,92 @@
+{
+  "schema": "amcad.placements",
+  "schema_version": 1,
+  "units": "mm",
+  "project_id": "9bce5919-9330-57b9-ba99-74a0f27737cd",
+  "placements": {
+    "11efbfb1-efc4-50ee-86dc-ee4ef1d044e0": {
+      "translation_mm": [
+        0,
+        0,
+        0
+      ],
+      "rotation_deg": [
+        0,
+        0,
+        0
+      ]
+    },
+    "5520b2e6-b20f-5296-8abb-eef68be98755": {
+      "translation_mm": [
+        25,
+        0,
+        0
+      ],
+      "rotation_deg": [
+        0,
+        0,
+        0
+      ]
+    },
+    "d8fa9eb8-e59e-5bd4-a3f8-6e7e41b36c7b": {
+      "translation_mm": [
+        50,
+        0,
+        0
+      ],
+      "rotation_deg": [
+        0,
+        0,
+        0
+      ]
+    },
+    "12072a94-415b-5ce3-9ca8-099c87d98a46": {
+      "translation_mm": [
+        75,
+        0,
+        0
+      ],
+      "rotation_deg": [
+        0,
+        0,
+        0
+      ]
+    },
+    "7695d90f-230b-58af-a1ef-8135e874a5dd": {
+      "translation_mm": [
+        100,
+        0,
+        0
+      ],
+      "rotation_deg": [
+        0,
+        0,
+        0
+      ]
+    },
+    "086c1eff-6f81-5fe7-a635-896b9eec3e8d": {
+      "translation_mm": [
+        125,
+        0,
+        0
+      ],
+      "rotation_deg": [
+        0,
+        0,
+        0
+      ]
+    },
+    "5e60b914-2eaa-5675-8b9d-745e5e305546": {
+      "translation_mm": [
+        150,
+        0,
+        0
+      ],
+      "rotation_deg": [
+        0,
+        0,
+        0
+      ]
+    }
+  }
+}

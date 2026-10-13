@@ -105,7 +105,7 @@ def test_ambiguous_mapping_requires_explicit_selection(qapp,tmp_path):
         modal(manager.assign,choose)
         assert i.port_mapping==mapping(c)
         incompatible=w.cavity_library.save(cavity('Wrong count',1));manager.refresh()
-        assert incompatible.id not in [manager.table.item(r,0).data(Qt.UserRole) for r in range(manager.table.rowCount())]
+        assert incompatible.id not in [item.data(0,Qt.UserRole) for item in manager.tree.entries]
     finally:manager.reject();close_window(w)
 
 
@@ -152,14 +152,14 @@ def test_legacy_import_ui_keeps_assignment_explicit(qapp,tmp_path,monkeypatch):
         original=w.project.to_dict();manager.import_legacy()
         assert len(w.cavity_library.definitions)==1 and w.project.to_dict()==original
         assert 'unchanged' in manager.feedback.text()
-        assert manager.table.rowCount()==1 and 'INVALID' in manager.table.item(0,5).text()
+        assert len(manager.tree.entries)==1 and 'INVALID' in manager.tree.entries[0].data(0,Qt.UserRole+2)
         manager.import_legacy();assert len(w.cavity_library.definitions)==1
         original_id=manager.selected_id();manager.duplicate();copy_id=manager.selected_id()
         assert copy_id!=original_id and len(w.cavity_library.definitions)==2
         from PySide6.QtWidgets import QInputDialog
         monkeypatch.setattr(QInputDialog,'getText',lambda *a,**k:('Renamed imported draft',True))
         manager.rename();assert w.cavity_library.definitions[copy_id].name=='Renamed imported draft'
-        assert 'INVALID' in manager.table.item(manager.table.currentRow(),5).text()
+        assert 'INVALID' in manager.tree.currentItem().data(0,Qt.UserRole+2)
     finally:manager.reject();close_window(w)
 
 
@@ -183,7 +183,7 @@ def test_library_rename_duplicate_and_explicit_snapshot_refresh(qapp,tmp_path,mo
         d.duplicate();copy_id=d.selected_id();assert copy_id!=c.id and w.cavity_library.definitions[copy_id].revision==1
         changed=deepcopy(w.cavity_library.definitions[c.id]);changed.description='Library update only';new=w.cavity_library.save(changed)
         assert w.project.cavities[c.id].revision==2
-        d.refresh(c.id);assert 'explicit refresh' in d.table.item(d.table.currentRow(),5).text()
+        d.refresh(c.id);assert 'explicit refresh' in d.tree.currentItem().data(0,Qt.UserRole+2)
         d.refresh_snapshot();assert w.project.cavities[c.id].revision==new.revision
     finally:d.reject();close_window(w)
 

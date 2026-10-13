@@ -216,6 +216,9 @@ class CavityEditor(QDialog):
             metadata=QFormLayout();self.cavity_name=QLineEdit(self.cavity_definition.name if self.cavity_definition else '')
             self.cavity_description=QLineEdit(self.cavity_definition.description if self.cavity_definition else '')
             metadata.addRow('Cavity name (required)',self.cavity_name);metadata.addRow('Description',self.cavity_description)
+            from ui.library_organization import CategorySelector
+            current=cavity_library.category_for(self.cavity_definition) if cavity_library and self.cavity_definition else 'Uncategorized'
+            self.category=CategorySelector(cavity_library,current,self);metadata.addRow('Category',self.category)
             if self.cavity_definition:metadata.addRow('ID / revision',QLabel(f'{self.cavity_definition.id} / {self.cavity_definition.revision}'))
             root.addLayout(metadata)
         heading = QHBoxLayout()
@@ -697,5 +700,8 @@ class CavityEditor(QDialog):
                 if self.save_callback is None and self.cavity_library is None:raise ValueError('Choose a cavity library before saving')
                 self.result_cavity=self.save_callback(cavity) if self.save_callback else self.cavity_library.save(cavity)
                 if self.result_cavity is None:return
+                if self.cavity_library and self.cavity_library.category_for(self.result_cavity)!=self.category.text():
+                    self.cavity_library.move_entry(self.result_cavity.id,self.category.text())
+                    if hasattr(self.parent(),'refresh_library'):self.parent().refresh_library()
             except (ValueError,OSError) as error:self.feedback.setText(str(error));return
         self.accept()

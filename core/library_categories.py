@@ -43,3 +43,13 @@ class LibraryCategories:
         # Capture fallback categories without rewriting component or cavity definitions.
         for entry in self.definitions.values():self.entry_categories[entry.id]=rename(self.category_for(entry))
         self.categories={rename(p) for p in self.categories};self.categories.add(new);self.save_categories()
+
+    def delete_category(self,path):
+        """Explicit organization only: keep every definition file and move entries safely."""
+        path=self.category_path(path)
+        if path=='Uncategorized':raise ValueError('Uncategorized cannot be deleted')
+        inside=lambda value:value==path or value.startswith(path+'/')
+        for entry in self.definitions.values():
+            if inside(self.category_for(entry)):self.entry_categories[entry.id]='Uncategorized'
+        self.categories={category for category in self.categories if not inside(category)}
+        self.categories.add('Uncategorized');self.save_categories()

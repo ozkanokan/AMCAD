@@ -1,4 +1,4 @@
-# V1.6 libraries and schematic workflow
+# V1.6a libraries and schematic workflow
 
 Both libraries are tabbed docks by default; drag their titles to float or dock
 elsewhere. View → Component Library / Cavity Library controls visibility. Closing
@@ -17,8 +17,15 @@ mappings remain stable. Junction edges must remain distinct. Count changes are
 instance-specific; connected ports cannot be removed, and assigned cavities must
 be removed before changing the count.
 
-Component → Component Library provides New, Save Selected Instance, Edit, Rename,
-Delete, New Category, Rename / Move Category and Move Entry. Nested paths such as
+Each dock and standalone library has a search field and one prominent creation
+button. Right-click entries for applicable actions: Place, Edit, Rename, Duplicate,
+Save Selected Instance to Library, Move to Category and Delete. Right-click a category
+for New Subcategory, Rename and Delete; right-click empty browser space for New Category.
+Deletion moves the category’s entries to Uncategorized without deleting definition
+files. Move to Category uses an existing-category selector, or drag an entry onto
+a category. Component drag-and-drop to the schematic still works. New Component
+and Cavity Editor provide category selectors with an explicit + New Category action.
+Nested paths such as
 `Lee/Check Valves` become collapsible branches in the library dock. Saved instances
 retain their effective labels and edge layout. The optional cavity default stores
 only its cavity ID and complete port mapping. Future placements resolve that ID
@@ -27,10 +34,14 @@ A missing, invalid or incompatible default places the component unassigned with 
 status message. Library edits increment revisions without changing placed snapshots;
 a new revision placed alongside an older one receives its own project definition.
 
-Both managers support category organization. Cavity category changes write only
+Both docks and managers show immediately updated expandable nested categories,
+including empty categories and Uncategorized. Category-only editor changes retain
+the existing definition revision. Cavity category changes write only
 `categories.json`, preserving cavity file bytes, geometry, IDs and revisions.
 Symbol previews render actual schematic items; cavity previews render the evaluated
 YZ profile with true corner geometry, proportional fit and no editor overlays.
+Component thumbnails omit text that would be illegible
+at thumbnail size; names and counts remain readable beside each actual symbol.
 
 ## Cavity assignment and usage
 
@@ -41,9 +52,14 @@ etc. A complete unique mapping closes the assignment manager automatically and
 refreshes Properties. Accepting Properties retains the latest assignment.
 Remove Cavity Assignment clears only the instance reference/mapping.
 
-The library manager lists usage counts and referencing instance names. Select a
-reference to Locate in Schematic or Remove Selected Reference, which requires
-confirmation. The cavity dock's In Use section shows names/counts and offers
+Cavity entries show name, interface count, revision and usage count. Selecting
+a cavity reveals a compact status/reference section. Select a reference to Locate
+in Schematic or Remove Selected Reference, which requires confirmation. Right-click
+cavity entries for editing, rename/duplicate, explicit assignment, removal, locate,
+move/delete, snapshot refresh and legacy import when applicable. Double-click opens
+a cavity; component double-click retains placement. Category double-click expands
+its branch without editing. Search filters names and category branches.
+The cavity dock's In Use section shows names/counts and offers
 Locate; shared cavities prompt for the instance. Used cavities cannot be deleted.
 Assignment changes mark the project dirty; saving remains explicit. Library file
 writes are independent of project undo/redo, while instance assignments and port
@@ -55,8 +71,8 @@ Use Python **3.14.4** and install `requirements-dev.txt`. For an isolated review
 point both libraries at disposable directories before launching:
 
 ```bash
-export AMCAD_COMPONENT_LIBRARY=/tmp/amcad-v16-review/components
-export AMCAD_CAVITY_LIBRARY=/tmp/amcad-v16-review/cavities
+export AMCAD_COMPONENT_LIBRARY=/tmp/amcad-v16a-review/components
+export AMCAD_CAVITY_LIBRARY=/tmp/amcad-v16a-review/cavities
 python -m app.main examples/instance_cavities.amcad.json
 ```
 

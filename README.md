@@ -1,7 +1,9 @@
-# AMCAD — Hydraulic Manifold Schematic Editor (V1.6)
+# AMCAD — Hydraulic Manifold Schematic Editor (V1.6a)
 
 A standalone Python / PySide6 desktop editor for hydraulic schematics and their
-graph foundation. V1.6 adds configurable N-Port Generic components, editable instance
+graph foundation. V1.6a simplifies both libraries into searchable category trees
+with context menus, category selectors and one creation button. V1.6 added
+configurable N-Port Generic components, editable instance
 port labels/edges, reusable component defaults, nested library categories and dockable
 library panels. Explicit cavity assignment, usage/locate actions and port alignment
 guides build on the existing axisymmetric cavity sketcher, with
@@ -43,7 +45,7 @@ QT_QPA_PLATFORM=offscreen python -m pytest -q
 QT_QPA_PLATFORM=offscreen python -m app.main examples/c1_r.amcad.json --smoke
 ```
 
-All **353 tests** and all five sample application launch checks pass on Python 3.14.4 under
+All **361 tests** and all five sample application launch checks pass on Python 3.14.4 under
 Linux. Tests exercise the wizard, drag/drop, manual drawing, segment and bend
 drags, rotation, single-line occupancy, geometry persistence, undo/redo,
 copy/paste, legacy migration, completeness, crossings and graph export. Cavity tests cover
@@ -68,7 +70,7 @@ executable packaging have not been validated.
   removed; remove a cavity assignment before changing the count.
 - Single-component drags use temporary port-first alignment guides with a six-pixel
   magnetic tolerance, followed by center alignment. The grid is visual only.
-- See [V1.6 library workflow and local testing](docs/library-ux-v16.md).
+- See [V1.6a library workflow and local testing](docs/library-ux-v16.md).
 - Drag component bodies to move. Click to select, Ctrl-click to extend selection,
   or drag empty canvas for a selection rectangle. Double-click a component or
   press F2 for its name, orientation, port labels/edges and cavity assignment.

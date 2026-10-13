@@ -11,9 +11,9 @@ from ui.geometry import port_positions
 
 class NodeWizard(QDialog):
     """Create reusable definitions; side/order is the V1 symbol layout."""
-    def __init__(self,parent=None,source=None):
+    def __init__(self,parent=None,source=None,library=None):
         super().__init__(parent)
-        self.setWindowTitle('New Component — Port / Node Wizard')
+        self.setWindowTitle('Edit Component Definition' if source else 'New Component — Port / Node Wizard')
         self.resize(860,760)
         self.source=source
         self.definition = None
@@ -23,7 +23,10 @@ class NodeWizard(QDialog):
         form = QFormLayout()
         self.name=QLineEdit(); self.name.setPlaceholderText('EHSV or Relief Valve')
         self.prefix=QLineEdit(); self.prefix.setPlaceholderText('EHSV or RV')
-        self.category=QLineEdit('Valves')
+        from ui.library_organization import CategorySelector
+        library=library or getattr(parent,'library',None)
+        current=library.category_for(source) if library and source else source.category if source else 'Valves'
+        self.category=CategorySelector(library,current,self)
         self.count=QSpinBox(); self.count.setRange(1,128); self.count.setValue(2)
         form.addRow('Component Name',self.name); form.addRow('Component Prefix',self.prefix)
         form.addRow('Category',self.category); form.addRow('Number of Hydraulic Ports',self.count)
@@ -60,7 +63,7 @@ class NodeWizard(QDialog):
         self.set_port_count(2)
         if source:
             self.definition_id=source.id;self.count.setValue(len(source.ports));self.updating=True
-            self.name.setText(source.name);self.prefix.setText(source.prefix);self.category.setText(source.category)
+            self.name.setText(source.name);self.prefix.setText(source.prefix);self.category.setText(library.category_for(source) if library else source.category)
             for row,port in enumerate(source.ports):
                 for col,value in enumerate((port.id,port.display_name,port.port_type)):
                     self.ports.item(row,col).setText(value)
@@ -114,6 +117,12 @@ class NodeWizard(QDialog):
             from copy import deepcopy
             result.symbol=deepcopy(self.source.symbol);result.revision=self.source.revision;result.physical=deepcopy(self.source.physical)
             result.default_cavity_ref=self.source.default_cavity_ref;result.default_port_mapping=deepcopy(self.source.default_port_mapping)
+            for field in ('component_cad_path','cavity_cad_path','keepout_cad_path'):setattr(result,field,getattr(self.source,field))
+            originals={p.id:p for p in self.source.ports}
+            for port in result.ports:
+                if port.id in originals:
+                    port.local_position_xyz=deepcopy(originals[port.id].local_position_xyz)
+                    port.local_direction_xyz=deepcopy(originals[port.id].local_direction_xyz)
         return result
 
     def update_preview(self,*args):
@@ -125,11 +134,13 @@ class NodeWizard(QDialog):
         pen=QPen(QColor('#42576a'),1.5)
         self.scene.addRect(-w/2,-h/2,w,h,pen,QColor('white'))
         title=self.scene.addText(d.name or 'Component',QFont('Sans Serif',10))
+        title.setDefaultTextColor(QColor('#233847'))
         title.setPos(-title.boundingRect().width()/2,-14)
         for p in d.ports:
             pos=port_positions(d)[p.id]
             self.scene.addEllipse(pos.x()-4,pos.y()-4,8,8,QPen(QColor('#17657a')),QColor('white'))
             text=self.scene.addText(p.display_name or p.id,QFont('Sans Serif',9))
+            text.setDefaultTextColor(QColor('#233847'))
             tw=text.boundingRect().width(); th=text.boundingRect().height()
             if p.side=='LEFT': text.setPos(pos.x()-tw-8,pos.y()-th/2)
             elif p.side=='RIGHT': text.setPos(pos.x()+8,pos.y()-th/2)

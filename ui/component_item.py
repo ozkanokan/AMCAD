@@ -64,7 +64,9 @@ class ComponentItem(QGraphicsItem):
         painter.setRenderHint(painter.RenderHint.Antialiasing)
         incomplete = not self.canvas.project.is_complete(self.instance.id)
         color = '#168c9d' if self.isSelected() else '#ad772d' if incomplete else '#42576a'
-        painter.setPen(QPen(QColor(color), 2 if self.isSelected() else 1.5))
+        pen=QPen(QColor('#42576a' if getattr(self,'preview_symbol',False) else color),2 if self.isSelected() else 1.5)
+        if getattr(self,'preview_symbol',False):pen.setCosmetic(True)
+        painter.setPen(pen)
         painter.setBrush(QBrush(QColor('#e8f6f7' if self.isSelected() else '#ffffff')))
         if self.kind=='junction':
             for port in self.ports.values():
@@ -81,6 +83,7 @@ class ComponentItem(QGraphicsItem):
             painter.restore()
         else:
             painter.drawRect(QRectF(-self.w/2,-self.h/2,self.w,self.h))
+            if getattr(self,'preview_symbol',False):return
             painter.setFont(QFont('Sans Serif', 9))
             painter.drawText(QRectF(-self.w/2+12,-14,self.w-24,28), Qt.AlignCenter, self.definition.name)
 

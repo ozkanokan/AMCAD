@@ -38,7 +38,12 @@ class MainWindow(QMainWindow):
         dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
         panel = QWidget(); layout = QVBoxLayout(panel)
         hint = QLabel('Drag onto the canvas\nor double-click to place'); layout.addWidget(hint)
+        self.component_search=QLineEdit();self.component_search.setPlaceholderText('Search components…');layout.addWidget(self.component_search)
         self.library_panel = ComponentLibraryPanel(); layout.addWidget(self.library_panel)
+        self.component_search.textChanged.connect(self.library_panel.filter)
+        from ui.component_manager import ComponentLibraryActions
+        self.component_library_actions=ComponentLibraryActions(self,self.library_panel,self.refresh_library,self)
+        self.library_panel.customContextMenuRequested.connect(self.component_library_actions.context_menu)
         self.library_panel.itemDoubleClicked.connect(lambda item,column:self.place_center(item))
         new = QPushButton('+ New Component'); new.clicked.connect(self.new_component); layout.addWidget(new)
         dock.setWidget(panel); self.addDockWidget(Qt.RightDockWidgetArea,dock)

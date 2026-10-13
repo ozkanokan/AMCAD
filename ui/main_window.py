@@ -65,6 +65,7 @@ class MainWindow(QMainWindow):
             (file_menu,'save','Save',QKeySequence.Save,self.save_project),
             (file_menu,'save_as','Save As…',QKeySequence.SaveAs,self.save_as),
             (file_menu,'export','Export Hydraulic Graph…','Ctrl+E',self.export),
+            (file_menu,'grasshopper_export','Export to Grasshopper…',None,self.export_grasshopper),
             (edit_menu,'undo','Undo',QKeySequence.Undo,self.undo),
             (edit_menu,'redo','Redo',QKeySequence.Redo,self.redo),
             (edit_menu,'copy','Copy',QKeySequence.Copy,self.copy),
@@ -397,6 +398,19 @@ class MainWindow(QMainWindow):
             try:
                 self.export_to(path); self.statusBar().showMessage('Hydraulic graph exported')
             except (OSError,ValueError) as error: self.error(error)
+
+    def export_grasshopper_to(self,path):
+        from core.grasshopper_export import save_grasshopper
+        save_grasshopper(self.project,path)
+
+    def export_grasshopper(self):
+        path,_=QFileDialog.getSaveFileName(self,'Export to Grasshopper','project.grasshopper.json','JSON (*.json)')
+        if not path:return
+        if not path.lower().endswith('.json'):path+='.json'
+        try:
+            self.export_grasshopper_to(path)
+            self.statusBar().showMessage('Grasshopper export saved; physical placement is defined separately in Grasshopper')
+        except (OSError,ValueError) as error:self.error(error)
 
     def closeEvent(self,event):
         if self.confirm_discard(): event.accept()

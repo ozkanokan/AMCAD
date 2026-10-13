@@ -1,0 +1,32 @@
+{
+  "schema": "amcad.placements",
+  "schema_version": 1,
+  "units": "mm",
+  "project_id": "0ecc454c-a4fd-5593-8d3c-332495730ca5",
+  "placements": {
+    "11efbfb1-efc4-50ee-86dc-ee4ef1d044e0": {
+      "translation_mm": [
+        0,
+        0,
+        0
+      ],
+      "rotation_deg": [
+        0,
+        0,
+        0
+      ]
+    },
+    "5520b2e6-b20f-5296-8abb-eef68be98755": {
+      "translation_mm": [
+        30,
+        10,
+        5
+      ],
+      "rotation_deg": [
+        15,
+        30,
+        90
+      ]
+    }
+  }
+}

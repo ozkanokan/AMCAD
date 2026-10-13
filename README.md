@@ -45,7 +45,7 @@ QT_QPA_PLATFORM=offscreen python -m pytest -q
 QT_QPA_PLATFORM=offscreen python -m app.main examples/c1_r.amcad.json --smoke
 ```
 
-All **361 tests** and all five sample application launch checks pass on Python 3.14.4 under
+All **391 tests** and all five sample application launch checks pass on Python 3.14.4 under
 Linux. Tests exercise the wizard, drag/drop, manual drawing, segment and bend
 drags, rotation, single-line occupancy, geometry persistence, undo/redo,
 copy/paste, legacy migration, completeness, crossings and graph export. Cavity tests cover
@@ -345,3 +345,21 @@ geometry/occupancy are rejected. Line-click branching remains out of scope.
 Independent cavity JSON lives at `$AMCAD_CAVITY_LIBRARY` when configured, otherwise
 in the platform user-data `amcad/cavities` directory. The library manager shows its
 actual path; [storage details](docs/cavity-library.md#storage-and-identities) cover all platforms.
+
+## Rhino 8 / Grasshopper integration — Phase 1
+
+File → **Export to Grasshopper…** writes the separate `amcad.grasshopper` schema 1
+in millimeters. It includes assigned cavity snapshots, original corner parameters,
+exact derived line/arc segments, hydraulic interface poses/sections, port mappings
+and stable instance/interface connectivity. Project and cavity JSON formats remain
+unchanged. Unassigned components retain connectivity as explicit boundaries.
+
+The [Grasshopper Python 3 example and setup guide](integrations/grasshopper/README.md)
+shows two independent instances of one cavity with a fillet and 30° chamfer. Rhino
+constructs exact revolved Breps; per-instance sliders and separate placement JSON
+control physical translation/orientation. Schematic coordinates never determine
+physical placement. Rhino 8 is required only for the optional importer, with no
+new AMCAD dependencies. Routing, optimization and manifold Booleans remain outside
+this phase. Cloud checks validate the export/placement contract and actual
+OpenNURBS solids using McNeel's SDK; native Rhino/Grasshopper UI execution requires
+local verification described in the guide.

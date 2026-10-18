@@ -3,13 +3,39 @@ import Eto.Forms as forms
 import Eto.Drawing as drawing
 import Rhino
 from System import Array,String
+import Rhino.Geometry as rg
+import Rhino.Display as rd
+from System.Drawing import Color
+
+
+class CavitySelectionConduit(rd.DisplayConduit):
+    """Draw-only overlay; never selects, bakes or modifies Rhino objects."""
+    def __init__(self):
+        super().__init__()
+        self.geometry = None
+        self.label = ''
+        self.color = Color.FromArgb(255, 165, 0)
+
+    def DrawForeground(self, e):
+        brep = self.geometry
+        if brep is None:
+            return
+        try:
+            for edge in brep.Edges:
+                e.Display.DrawCurve(edge, self.color, 4)
+            bbox = brep.GetBoundingBox(True)
+            if bbox.IsValid:
+                e.Display.DrawDot(bbox.Center, self.label, self.color, Color.Black)
+        except Exception:
+            pass
 
 
 class PlacementEditor(forms.Form):
-    def __init__(self,model,on_changed,on_closed):
+    def __init__(self,model,on_changed,on_closed,highlight_lookup=None):
         super().__init__();self.model=model;self.on_changed=on_changed;self.on_closed=on_closed
         self.Title='AMCAD · Cavity Placement';self.ClientSize=drawing.Size(560,740);self.MinimumSize=drawing.Size(460,680);self.Padding=drawing.Padding(12)
         self._loading=False;self._records=[];self._token=None;self._baseline=[];self._display_dirty=None
+        self._highlight_lookup=highlight_lookup;self._highlight=CavitySelectionConduit()
         self.search=forms.TextBox();self.search.PlaceholderText='Search schematic instance names…'
         self.instances=forms.ListBox();self.instances.Height=190
         self.heading=forms.Label();self.heading.Wrap=forms.WrapMode.Word
@@ -20,7 +46,7 @@ class PlacementEditor(forms.Form):
         self.search.TextChanged+=self.search_changed;self.instances.SelectedIndexChanged+=self.selection_changed
         for field in self.fields:field.TextChanged+=self.field_changed
         self.apply_button.Click+=self.apply;self.save_button.Click+=self.save;self.reload_button.Click+=self.reload
-        self.Closed+=lambda sender,event:self.on_closed(self)
+        self.Closed+=self._closed
         layout=forms.DynamicLayout();layout.Spacing=drawing.Size(8,8)
         layout.AddRow(self.search);layout.AddRow(self.instances);layout.AddRow(self.heading)
         for label,field in zip(('X (mm)','Y (mm)','Z (mm)','Rx (°)','Ry (°)','Rz (°)'),self.fields):
@@ -28,7 +54,7 @@ class PlacementEditor(forms.Form):
         layout.AddRow(self.apply_button);layout.AddRow(self.save_button,self.reload_button);layout.AddRow(self.feedback)
         self.Content=layout
         if self.model.selected_id is None and self.model.catalog():self.model.select(self.model.catalog()[0]['id'])
-        self.refresh_instances();self.load_fields()
+        self.refresh_instances();self.load_fields();self.update_highlight()
 
     def refresh_instances(self):
         self._loading=True
@@ -46,7 +72,7 @@ class PlacementEditor(forms.Form):
         if self._loading:return
         index=self.instances.SelectedIndex
         self.model.select(self._records[index]['id'] if index>=0 else None)
-        self.load_fields();self.on_changed()
+        self.load_fields();self.update_highlight()
 
     def load_fields(self):
         selected=self.model.selected_id;visible=any(r['id']==selected for r in self._records)
@@ -75,7 +101,7 @@ class PlacementEditor(forms.Form):
         try:
             values=[float(f.Text) for f in self.fields]
             self.model.apply_selected(values[:3],values[3:],self._token)
-            self.load_fields();self.on_changed()
+            self.load_fields();self.update_highlight();self.on_changed()
         except Exception as error:self.feedback.Text=str(error)
 
     def save(self,sender,event):
@@ -113,6 +139,32 @@ class PlacementEditor(forms.Form):
         elif self.pending():self.feedback.Text='Unapplied edits. Click Apply / Update; switching instances discards these edits.'
         elif self._display_dirty!=self.model.dirty:self.feedback.Text='Applied state has unsaved changes.' if self.model.dirty else 'Applied state matches the saved placement file.'
         self._display_dirty=self.model.dirty
+        self.update_highlight()
+
+    def update_highlight(self):
+        geometry=None;label=''
+        if self._highlight_lookup is not None and self.model.selected_id is not None:
+            try:
+                item=self._highlight_lookup(self.model.selected_id)
+                if item is not None:
+                    geometry,label=item
+                    if not isinstance(geometry,rg.Brep):
+                        value=getattr(geometry,'Value',None)
+                        geometry=value if isinstance(value,rg.Brep) else None
+            except Exception:
+                geometry=None
+        self._highlight.geometry=geometry
+        self._highlight.label=str(label)
+        self._highlight.Enabled=(geometry is not None)
+        doc=Rhino.RhinoDoc.ActiveDoc
+        if doc is not None:doc.Views.Redraw()
+
+    def _closed(self,sender,event):
+        self._highlight.Enabled=False
+        self._highlight.geometry=None
+        doc=Rhino.RhinoDoc.ActiveDoc
+        if doc is not None:doc.Views.Redraw()
+        self.on_closed(self)
 
 
 def show_editor(window):

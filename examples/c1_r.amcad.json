@@ -1,6 +1,6 @@
 {
   "schema": "amcad.project",
-  "schema_version": 3,
+  "schema_version": 7,
   "project": {
     "id": "05bdc326-4c2d-429c-84d5-a7c6808e71f3",
     "name": "C1\u2013R hydraulic architecture"
@@ -31,7 +31,15 @@
       "internal_relationships": [],
       "component_cad_path": null,
       "cavity_cad_path": null,
-      "keepout_cad_path": null
+      "keepout_cad_path": null,
+      "physical": {
+        "cavity_type": "NONE",
+        "cavity_profile": null,
+        "hydraulic_interfaces": []
+      },
+      "revision": 1,
+      "default_cavity_ref": null,
+      "default_port_mapping": {}
     },
     {
       "id": "demo-ehsv",
@@ -88,7 +96,114 @@
       "internal_relationships": [],
       "component_cad_path": null,
       "cavity_cad_path": null,
-      "keepout_cad_path": null
+      "keepout_cad_path": null,
+      "physical": {
+        "cavity_type": "REVOLVED_PROFILE",
+        "cavity_profile": {
+          "vertices": [
+            {
+              "z": 0,
+              "r": 0,
+              "id": "d0f9f9dd-f518-4a8d-ba9d-90f0a6a808e3",
+              "corner": {
+                "type": "SHARP",
+                "radius_mm": null,
+                "length_mm": null,
+                "angle_deg": null
+              }
+            },
+            {
+              "z": 0.0,
+              "r": 3.5,
+              "id": "96f711b9-8d34-4868-b73d-7a0d3efda6e6",
+              "corner": {
+                "type": "SHARP",
+                "radius_mm": null,
+                "length_mm": null,
+                "angle_deg": null
+              }
+            },
+            {
+              "z": 3.5,
+              "r": 3.5,
+              "id": "1af8313e-5a28-42dc-986c-92b696cff900",
+              "corner": {
+                "type": "SHARP",
+                "radius_mm": null,
+                "length_mm": null,
+                "angle_deg": null
+              }
+            },
+            {
+              "z": 3.5,
+              "r": 1.5,
+              "id": "1f28f9a2-96f9-4ba7-a360-c63698af2646",
+              "corner": {
+                "type": "SHARP",
+                "radius_mm": null,
+                "length_mm": null,
+                "angle_deg": null
+              }
+            },
+            {
+              "z": 7.0,
+              "r": 1.5,
+              "id": "fdec3dc5-07eb-44aa-b78c-3b78714a330e",
+              "corner": {
+                "type": "SHARP",
+                "radius_mm": null,
+                "length_mm": null,
+                "angle_deg": null
+              }
+            },
+            {
+              "z": 7.0,
+              "r": 3.0,
+              "id": "a4868f08-139d-47a6-bec4-a66d58c3b4dc",
+              "corner": {
+                "type": "SHARP",
+                "radius_mm": null,
+                "length_mm": null,
+                "angle_deg": null
+              }
+            },
+            {
+              "z": 8.5,
+              "r": 3.0,
+              "id": "3f064846-2880-4620-b7c8-02ac4edf7bf4",
+              "corner": {
+                "type": "SHARP",
+                "radius_mm": null,
+                "length_mm": null,
+                "angle_deg": null
+              }
+            },
+            {
+              "z": 10,
+              "r": 0,
+              "id": "2e451b18-5154-4792-bc6c-f540280e8b9d",
+              "corner": {
+                "type": "SHARP",
+                "radius_mm": null,
+                "length_mm": null,
+                "angle_deg": null
+              }
+            }
+          ],
+          "id": "f2071cd7-bd39-4b4e-a4a8-bfc8d204058a",
+          "schema_version": 1,
+          "units": "mm",
+          "datum": {
+            "mounting_face_z_mm": 0,
+            "positive_z": "DEPTH_INTO_MANIFOLD",
+            "revolve_axis_r_mm": 0
+          }
+        },
+        "hydraulic_interfaces": []
+      },
+      "revision": 1,
+      "default_cavity_ref": null,
+      "default_port_mapping": {}
     },
     {
       "id": "demo-relief",
@@ -131,7 +246,15 @@
       ],
       "component_cad_path": null,
       "cavity_cad_path": null,
-      "keepout_cad_path": null
+      "keepout_cad_path": null,
+      "physical": {
+        "cavity_type": "NONE",
+        "cavity_profile": null,
+        "hydraulic_interfaces": []
+      },
+      "revision": 1,
+      "default_cavity_ref": null,
+      "default_port_mapping": {}
     },
     {
       "id": "junction-3",
@@ -189,57 +312,982 @@
       ],
       "component_cad_path": null,
       "cavity_cad_path": null,
-      "keepout_cad_path": null
+      "keepout_cad_path": null,
+      "physical": {
+        "cavity_type": "NONE",
+        "cavity_profile": null,
+        "hydraulic_interfaces": []
+      },
+      "revision": 1,
+      "default_cavity_ref": null,
+      "default_port_mapping": {}
+    },
+    {
+      "id": "generic-2",
+      "name": "2-Port Generic",
+      "prefix": "G",
+      "category": "Generic",
+      "ports": [
+        {
+          "id": "i",
+          "display_name": "IN",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "LEFT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        },
+        {
+          "id": "o",
+          "display_name": "OUT",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "RIGHT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        }
+      ],
+      "symbol": {
+        "kind": "box",
+        "width": 110,
+        "height": 76
+      },
+      "internal_relationships": [],
+      "component_cad_path": null,
+      "cavity_cad_path": null,
+      "keepout_cad_path": null,
+      "physical": {
+        "cavity_type": "NONE",
+        "cavity_profile": null,
+        "hydraulic_interfaces": []
+      },
+      "revision": 1,
+      "default_cavity_ref": null,
+      "default_port_mapping": {}
+    },
+    {
+      "id": "ed3168d2-72bc-43c2-998c-0ada219e68c5",
+      "name": "N-Port Generic",
+      "prefix": "G",
+      "category": "Generic",
+      "ports": [
+        {
+          "id": "p1",
+          "display_name": "Port 1",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "LEFT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        },
+        {
+          "id": "p2",
+          "display_name": "Port 2",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "LEFT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        },
+        {
+          "id": "p3",
+          "display_name": "Port 3",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "LEFT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        },
+        {
+          "id": "p4",
+          "display_name": "Port 4",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "LEFT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        },
+        {
+          "id": "p5",
+          "display_name": "Port 5",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "RIGHT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        },
+        {
+          "id": "p6",
+          "display_name": "Port 6",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "RIGHT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        },
+        {
+          "id": "p7",
+          "display_name": "Port 7",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "RIGHT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        },
+        {
+          "id": "p8",
+          "display_name": "Port 8",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "RIGHT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        }
+      ],
+      "symbol": {
+        "kind": "box",
+        "width": 110,
+        "height": 76,
+        "configurable_ports": true
+      },
+      "internal_relationships": [],
+      "component_cad_path": null,
+      "cavity_cad_path": null,
+      "keepout_cad_path": null,
+      "physical": {
+        "cavity_type": "NONE",
+        "cavity_profile": null,
+        "hydraulic_interfaces": []
+      },
+      "revision": 1,
+      "default_cavity_ref": null,
+      "default_port_mapping": {}
+    },
+    {
+      "id": "generic-4",
+      "name": "4-Port Generic",
+      "prefix": "G4",
+      "category": "Generic",
+      "ports": [
+        {
+          "id": "P",
+          "display_name": "Port 1",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "TOP",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        },
+        {
+          "id": "R",
+          "display_name": "Port 2",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "BOTTOM",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        },
+        {
+          "id": "C1",
+          "display_name": "Port 3",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "LEFT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        },
+        {
+          "id": "C2",
+          "display_name": "Port 4",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "RIGHT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        }
+      ],
+      "symbol": {
+        "kind": "box",
+        "width": 110,
+        "height": 76,
+        "configurable_ports": true
+      },
+      "internal_relationships": [],
+      "component_cad_path": null,
+      "cavity_cad_path": null,
+      "keepout_cad_path": null,
+      "physical": {
+        "cavity_type": "NONE",
+        "cavity_profile": null,
+        "hydraulic_interfaces": []
+      },
+      "revision": 1,
+      "default_cavity_ref": null,
+      "default_port_mapping": {}
+    },
+    {
+      "id": "25e0fe69-9446-43f4-8aba-12155de14e53",
+      "name": "deneme",
+      "prefix": "dnm",
+      "category": "Valves2",
+      "ports": [
+        {
+          "id": "p1",
+          "display_name": "Port 1",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "LEFT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        },
+        {
+          "id": "p2",
+          "display_name": "Port 2",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "RIGHT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        },
+        {
+          "id": "p3",
+          "display_name": "Port 3",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "LEFT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        },
+        {
+          "id": "p4",
+          "display_name": "Port 4",
+          "port_type": "HYDRAULIC",
+          "flow_direction": "UNSPECIFIED",
+          "side": "RIGHT",
+          "local_position_xyz": null,
+          "local_direction_xyz": null,
+          "required": true
+        }
+      ],
+      "symbol": {
+        "kind": "box",
+        "width": 140,
+        "height": 90
+      },
+      "internal_relationships": [],
+      "component_cad_path": null,
+      "cavity_cad_path": null,
+      "keepout_cad_path": null,
+      "physical": {
+        "cavity_type": "NONE",
+        "cavity_profile": null,
+        "hydraulic_interfaces": []
+      },
+      "revision": 1,
+      "default_cavity_ref": null,
+      "default_port_mapping": {}
+    }
+  ],
+  "cavity_definitions": [
+    {
+      "schema": "amcad.cavity",
+      "schema_version": 1,
+      "name": "307103_RET",
+      "profile": {
+        "vertices": [
+          {
+            "z": 0,
+            "r": 0,
+            "id": "4b15e023-4af9-4fc4-8552-97f6c393e178",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 0,
+            "r": 7.726,
+            "id": "5bde2817-a6d2-40d6-8a36-a2a7500c43d0",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 2,
+            "r": 6.998,
+            "id": "cd4eb5b6-deef-4a5c-8aa2-4a61d51b08c3",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 15,
+            "r": 6.998,
+            "id": "78a7cf56-acc1-4904-947a-82411ee7505e",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 19.223,
+            "r": 2.775,
+            "id": "f6eaa96c-b216-47ec-ad15-f2cc1e377fc0",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 19.223,
+            "r": 0,
+            "id": "3b681a61-d033-4e1b-9ebc-f0318e47d173",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          }
+        ],
+        "id": "ff5be11c-cac3-4d2d-a659-73e6f0caced4",
+        "schema_version": 1,
+        "units": "mm",
+        "datum": {
+          "mounting_face_z_mm": 0,
+          "positive_z": "DEPTH_INTO_MANIFOLD",
+          "revolve_axis_r_mm": 0
+        }
+      },
+      "interfaces": [
+        {
+          "hydraulic_port_id": "efd23704-35ad-4751-8879-ffc19b01b6a9",
+          "interface_type": "SURFACE",
+          "z_mm": 19.223,
+          "r_mm": 0.0,
+          "nominal_connection_diameter_mm": 4,
+          "preferred_direction": "UNSPECIFIED",
+          "id": "efd23704-35ad-4751-8879-ffc19b01b6a9",
+          "surface_anchor": {
+            "kind": "LINE",
+            "vertex_id": "f6eaa96c-b216-47ec-ad15-f2cc1e377fc0",
+            "next_vertex_id": "3b681a61-d033-4e1b-9ebc-f0318e47d173",
+            "t": 1.0,
+            "angle_deg": 0.0
+          },
+          "direction": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "section": {
+            "type": "CIRCLE",
+            "diameter_mm": 5.55,
+            "width_mm": 4.0,
+            "length_mm": 8.0,
+            "height_mm": 4.0
+          },
+          "section_rotation_deg": 0.0,
+          "preview_length_mm": 2.0,
+          "preview_mode": "CENTERED"
+        }
+      ],
+      "id": "4814e09b-0e4c-48d8-9c49-5546a179cfb9",
+      "revision": 1,
+      "geometry_type": "REVOLVED_PROFILE",
+      "description": "",
+      "port_count": 1
+    },
+    {
+      "schema": "amcad.cavity",
+      "schema_version": 1,
+      "name": "R_port",
+      "profile": {
+        "vertices": [
+          {
+            "z": 0,
+            "r": 0,
+            "id": "220c894b-c626-4210-9e7a-d1f86db46e02",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 0.0,
+            "r": 12.3,
+            "id": "801c69b4-9369-4b2c-812d-ab7859600dda",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 0.2,
+            "r": 12.1,
+            "id": "c27610a6-bb99-4460-8324-5e7c8bd84ca6",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 6.03,
+            "r": 12.1,
+            "id": "4f895a41-d37f-4270-aad6-1fbc6c2f8c68",
+            "corner": {
+              "type": "FILLET",
+              "radius_mm": 0.2,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 6.03,
+            "r": 10.0,
+            "id": "f1bd6743-d5fc-4a4c-80eb-da209b8223da",
+            "corner": {
+              "type": "CHAMFER",
+              "radius_mm": null,
+              "length_mm": 0.5,
+              "angle_deg": 45
+            }
+          },
+          {
+            "z": 11.3,
+            "r": 10.0,
+            "id": "6efbb611-06bb-4461-a91e-23e351760d58",
+            "corner": {
+              "type": "FILLET",
+              "radius_mm": 0.5,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 11.3,
+            "r": 8.1615,
+            "id": "09eec2ba-0272-44d4-b35b-9cdce14ded62",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 12.3,
+            "r": 7.798,
+            "id": "3690adb4-5986-4f0c-b7ea-fc1069c9bdc5",
+            "corner": {
+              "type": "FILLET",
+              "radius_mm": 1.0,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 22.5,
+            "r": 7.798,
+            "id": "987d7ff2-c5d8-4bf6-b299-f973161ec69e",
+            "corner": {
+              "type": "FILLET",
+              "radius_mm": 0.5,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 22.5,
+            "r": 0,
+            "id": "9963a9b5-e927-4bf1-92d0-55ee959daaff",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          }
+        ],
+        "id": "2ac7aa83-c43d-4e52-8ea9-9845972b8072",
+        "schema_version": 1,
+        "units": "mm",
+        "datum": {
+          "mounting_face_z_mm": 0,
+          "positive_z": "DEPTH_INTO_MANIFOLD",
+          "revolve_axis_r_mm": 0
+        }
+      },
+      "interfaces": [
+        {
+          "hydraulic_port_id": "e13c85b4-2374-4032-a85d-edc084d322bd",
+          "interface_type": "SURFACE",
+          "z_mm": 22.5,
+          "r_mm": 0.0,
+          "nominal_connection_diameter_mm": 4,
+          "preferred_direction": "UNSPECIFIED",
+          "id": "e13c85b4-2374-4032-a85d-edc084d322bd",
+          "surface_anchor": {
+            "kind": "LINE",
+            "vertex_id": "987d7ff2-c5d8-4bf6-b299-f973161ec69e",
+            "next_vertex_id": "9963a9b5-e927-4bf1-92d0-55ee959daaff",
+            "t": 1.0,
+            "angle_deg": 0.0
+          },
+          "direction": [
+            0.7071067811865475,
+            0.0,
+            0.7071067811865475
+          ],
+          "section": {
+            "type": "CIRCLE",
+            "diameter_mm": 5.55,
+            "width_mm": 4.0,
+            "length_mm": 8.0,
+            "height_mm": 4.0
+          },
+          "section_rotation_deg": 0.0,
+          "preview_length_mm": 2.0,
+          "preview_mode": "CENTERED"
+        }
+      ],
+      "id": "8f80a2fe-6541-4555-b7ee-4062fa8a53f2",
+      "revision": 2,
+      "geometry_type": "REVOLVED_PROFILE",
+      "description": "",
+      "port_count": 1
+    },
+    {
+      "schema": "amcad.cavity",
+      "schema_version": 1,
+      "name": "Act_blok",
+      "profile": {
+        "vertices": [
+          {
+            "z": 0,
+            "r": 0,
+            "id": "97649f2f-0d5d-44a3-806b-e8aa91ddf1a4",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 0.0,
+            "r": 2.0,
+            "id": "46d2c8e3-6f99-477b-aba5-dd2f4605780a",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 5.0,
+            "r": 2.0,
+            "id": "d179ca90-3bf4-4bb8-97c4-7740019e510d",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 5.0,
+            "r": 0,
+            "id": "bdf06c5a-bfc7-49ff-a2fe-b0ddaf5d597f",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          }
+        ],
+        "id": "3db81309-6074-4f38-bc6b-7b036c8af27d",
+        "schema_version": 1,
+        "units": "mm",
+        "datum": {
+          "mounting_face_z_mm": 0,
+          "positive_z": "DEPTH_INTO_MANIFOLD",
+          "revolve_axis_r_mm": 0
+        }
+      },
+      "interfaces": [
+        {
+          "hydraulic_port_id": "c61e8694-bc02-4b7e-a0bb-600d3984f907",
+          "interface_type": "SURFACE",
+          "z_mm": 5.0,
+          "r_mm": 0.0,
+          "nominal_connection_diameter_mm": 4,
+          "preferred_direction": "UNSPECIFIED",
+          "id": "c61e8694-bc02-4b7e-a0bb-600d3984f907",
+          "surface_anchor": {
+            "kind": "LINE",
+            "vertex_id": "d179ca90-3bf4-4bb8-97c4-7740019e510d",
+            "next_vertex_id": "bdf06c5a-bfc7-49ff-a2fe-b0ddaf5d597f",
+            "t": 1.0,
+            "angle_deg": 0.0
+          },
+          "direction": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "section": {
+            "type": "CIRCLE",
+            "diameter_mm": 4.0,
+            "width_mm": 4.0,
+            "length_mm": 8.0,
+            "height_mm": 4.0
+          },
+          "section_rotation_deg": 0.0,
+          "preview_length_mm": 2.0,
+          "preview_mode": "CENTERED"
+        }
+      ],
+      "id": "c177e63b-9087-4989-8638-37a1d24a9455",
+      "revision": 1,
+      "geometry_type": "REVOLVED_PROFILE",
+      "description": "",
+      "port_count": 1
+    },
+    {
+      "schema": "amcad.cavity",
+      "schema_version": 1,
+      "name": "Lee_FlowControl_375",
+      "profile": {
+        "vertices": [
+          {
+            "z": 0,
+            "r": 0,
+            "id": "1cb59877-e112-4863-b0cb-920afc9042ac",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 0.0,
+            "r": 4.7625,
+            "id": "aad319b3-85bd-4b3c-8a5d-1b4c8d0c1d30",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 40.988,
+            "r": 4.7625,
+            "id": "19413ef7-102c-4798-a872-ccbe66fbed6d",
+            "corner": {
+              "type": "FILLET",
+              "radius_mm": 0.07,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 41.9405,
+            "r": 3.81,
+            "id": "7a125cb5-e2d3-4bcf-8d94-b30c51bfb518",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 44.544,
+            "r": 3.81,
+            "id": "d25d10b6-45ad-49bf-8e44-84e942686b66",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          },
+          {
+            "z": 44.544,
+            "r": 0,
+            "id": "26f0fb75-1ffd-4565-9524-3daee9490f69",
+            "corner": {
+              "type": "SHARP",
+              "radius_mm": null,
+              "length_mm": null,
+              "angle_deg": null
+            }
+          }
+        ],
+        "id": "38e69987-3222-445b-93e5-2b29cbdf40e8",
+        "schema_version": 1,
+        "units": "mm",
+        "datum": {
+          "mounting_face_z_mm": 0,
+          "positive_z": "DEPTH_INTO_MANIFOLD",
+          "revolve_axis_r_mm": 0
+        }
+      },
+      "interfaces": [
+        {
+          "hydraulic_port_id": "4a792ead-cd34-470c-8560-83617a78062c",
+          "interface_type": "SURFACE",
+          "z_mm": 34.544,
+          "r_mm": 0.0,
+          "nominal_connection_diameter_mm": 4,
+          "preferred_direction": "UNSPECIFIED",
+          "id": "4a792ead-cd34-470c-8560-83617a78062c",
+          "surface_anchor": {
+            "kind": "LINE",
+            "vertex_id": "d25d10b6-45ad-49bf-8e44-84e942686b66",
+            "next_vertex_id": "26f0fb75-1ffd-4565-9524-3daee9490f69",
+            "t": 1.0,
+            "angle_deg": 0.0
+          },
+          "direction": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "section": {
+            "type": "CIRCLE",
+            "diameter_mm": 7.62,
+            "width_mm": 4.0,
+            "length_mm": 8.0,
+            "height_mm": 4.0
+          },
+          "section_rotation_deg": 0.0,
+          "preview_length_mm": 2.0,
+          "preview_mode": "CENTERED"
+        },
+        {
+          "hydraulic_port_id": "88ebf400-b344-4cee-9fbc-5630a19581f1",
+          "interface_type": "SURFACE",
+          "z_mm": 4.915080606076066,
+          "r_mm": 4.7625,
+          "nominal_connection_diameter_mm": 4,
+          "preferred_direction": "UNSPECIFIED",
+          "id": "88ebf400-b344-4cee-9fbc-5630a19581f1",
+          "surface_anchor": {
+            "kind": "LINE",
+            "vertex_id": "aad319b3-85bd-4b3c-8a5d-1b4c8d0c1d30",
+            "next_vertex_id": "19413ef7-102c-4798-a872-ccbe66fbed6d",
+            "t": 0.12,
+            "angle_deg": 0.0
+          },
+          "direction": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "section": {
+            "type": "CIRCLE",
+            "diameter_mm": 7.0,
+            "width_mm": 4.0,
+            "length_mm": 8.0,
+            "height_mm": 4.0
+          },
+          "section_rotation_deg": 0.0,
+          "preview_length_mm": 2.0,
+          "preview_mode": "CENTERED"
+        }
+      ],
+      "id": "4fa82fc5-80ae-4424-81c3-f9c2dcc11f95",
+      "revision": 4,
+      "geometry_type": "REVOLVED_PROFILE",
+      "description": "",
+      "port_count": 2
     }
   ],
   "component_instances": [
     {
       "definition_id": "external-port",
-      "name": "C1",
-      "x": -360,
-      "y": -80,
+      "name": "RET",
+      "x": 91.53202578521456,
+      "y": 12.17665615141955,
       "rotation": 0,
-      "id": "3069fb0a-6d17-4cbf-99c0-26d4b32262bd"
+      "id": "3069fb0a-6d17-4cbf-99c0-26d4b32262bd",
+      "cavity_ref": "4814e09b-0e4c-48d8-9c49-5546a179cfb9",
+      "port_mapping": {
+        "port": "efd23704-35ad-4751-8879-ffc19b01b6a9"
+      },
+      "port_names": {
+        "port": "RETPort"
+      },
+      "port_sides": {
+        "port": "RIGHT"
+      }
     },
     {
       "definition_id": "external-port",
       "name": "R",
-      "x": 420,
-      "y": 160,
+      "x": 336.63502800076463,
+      "y": 12.17665615141955,
       "rotation": 180,
-      "id": "bbe023dc-5c42-4985-8563-b3ddfc8985bb"
+      "id": "bbe023dc-5c42-4985-8563-b3ddfc8985bb",
+      "cavity_ref": "8f80a2fe-6541-4555-b7ee-4062fa8a53f2",
+      "port_mapping": {
+        "port": "e13c85b4-2374-4032-a85d-edc084d322bd"
+      },
+      "port_names": {
+        "port": "Port"
+      },
+      "port_sides": {
+        "port": "RIGHT"
+      }
     },
     {
-      "definition_id": "demo-ehsv",
-      "name": "EHSV1",
-      "x": 0,
-      "y": -100,
-      "rotation": 0,
-      "id": "3d164ce9-37f0-43b2-8235-ea0ffc9a5765"
+      "definition_id": "external-port",
+      "name": "EXT1",
+      "x": 403.5136768609173,
+      "y": 359.2250348154398,
+      "rotation": 270,
+      "id": "3b49b0ef-94c3-4ab1-9458-8a316ae555dc",
+      "cavity_ref": "c177e63b-9087-4989-8638-37a1d24a9455",
+      "port_mapping": {
+        "port": "c61e8694-bc02-4b7e-a0bb-600d3984f907"
+      },
+      "port_names": {
+        "port": "Port"
+      },
+      "port_sides": {
+        "port": "RIGHT"
+      }
     },
     {
-      "definition_id": "demo-relief",
-      "name": "RV1",
-      "x": 0,
-      "y": 160,
+      "definition_id": "external-port",
+      "name": "EXT2",
+      "x": 483.0013029762723,
+      "y": 299.2401591002606,
+      "rotation": 270,
+      "id": "f10c260d-3757-4e44-8351-bb9dfe7af5df",
+      "cavity_ref": "c177e63b-9087-4989-8638-37a1d24a9455",
+      "port_mapping": {
+        "port": "c61e8694-bc02-4b7e-a0bb-600d3984f907"
+      },
+      "port_names": {
+        "port": "Port"
+      },
+      "port_sides": {
+        "port": "RIGHT"
+      }
+    },
+    {
+      "definition_id": "external-port",
+      "name": "P",
+      "x": -90.84076258400758,
+      "y": 184.35331230283916,
       "rotation": 0,
-      "id": "47090898-8e3a-45e0-b4d1-59ab2af9981e"
+      "id": "c62e7c9b-268a-4c5d-b31b-261fece02652",
+      "cavity_ref": "8f80a2fe-6541-4555-b7ee-4062fa8a53f2",
+      "port_mapping": {
+        "port": "e13c85b4-2374-4032-a85d-edc084d322bd"
+      },
+      "port_names": {
+        "port": "Port"
+      },
+      "port_sides": {
+        "port": "RIGHT"
+      }
+    },
+    {
+      "definition_id": "generic-2",
+      "name": "Lee FCFA375-1",
+      "x": 168.32258949389657,
+      "y": 319.3169661226168,
+      "rotation": 0,
+      "id": "2cfbc591-a409-45bb-a74c-25b36b11cd6b",
+      "cavity_ref": "4fa82fc5-80ae-4424-81c3-f9c2dcc11f95",
+      "port_mapping": {
+        "i": "88ebf400-b344-4cee-9fbc-5630a19581f1",
+        "o": "4a792ead-cd34-470c-8560-83617a78062c"
+      },
+      "port_names": {
+        "i": "IN",
+        "o": "OUT"
+      },
+      "port_sides": {
+        "i": "LEFT",
+        "o": "RIGHT"
+      }
+    },
+    {
+      "definition_id": "generic-2",
+      "name": "Lee FCFA375-2",
+      "x": 256.49156494308045,
+      "y": 184.3533123028391,
+      "rotation": 0,
+      "id": "5a60fcd8-7779-4104-9256-74adc141459d",
+      "cavity_ref": "4fa82fc5-80ae-4424-81c3-f9c2dcc11f95",
+      "port_mapping": {
+        "i": "88ebf400-b344-4cee-9fbc-5630a19581f1",
+        "o": "4a792ead-cd34-470c-8560-83617a78062c"
+      },
+      "port_names": {
+        "i": "IN",
+        "o": "OUT"
+      },
+      "port_sides": {
+        "i": "LEFT",
+        "o": "RIGHT"
+      }
     },
     {
       "definition_id": "junction-3",
       "name": "J1",
-      "x": -200,
-      "y": -80,
+      "x": 10.322589493896572,
+      "y": 184.3533123028391,
       "rotation": 0,
-      "id": "fd0d6ff1-9a72-48d4-9cdd-f01bc081e15d"
-    },
-    {
-      "definition_id": "junction-3",
-      "name": "J2",
-      "x": 240,
-      "y": 160,
-      "rotation": 180,
-      "id": "d27eacea-8aed-42a1-9c49-e6bbdbeceafe"
+      "id": "ca275ed2-7bd9-4d2e-9aab-f6cc81b7c70e",
+      "cavity_ref": null,
+      "port_mapping": {},
+      "port_names": {},
+      "port_sides": {}
     }
   ],
   "nodes": [
@@ -256,383 +1304,304 @@
       "kind": "external_port"
     },
     {
-      "id": "cf88d514-d6f4-41ea-882c-f5c5690d0f19",
-      "instance_id": "3d164ce9-37f0-43b2-8235-ea0ffc9a5765",
-      "port_id": "P",
+      "id": "4dfbaf95-259c-437a-a7e3-5aed2c7fbd50",
+      "instance_id": "3b49b0ef-94c3-4ab1-9458-8a316ae555dc",
+      "port_id": "port",
+      "kind": "external_port"
+    },
+    {
+      "id": "6170d5cb-7e6b-4afe-ae4d-df196c471a20",
+      "instance_id": "f10c260d-3757-4e44-8351-bb9dfe7af5df",
+      "port_id": "port",
+      "kind": "external_port"
+    },
+    {
+      "id": "331d12e3-21f9-40fb-890f-9749efb80f4d",
+      "instance_id": "c62e7c9b-268a-4c5d-b31b-261fece02652",
+      "port_id": "port",
+      "kind": "external_port"
+    },
+    {
+      "id": "effa9c11-6343-41a2-874a-8901f1db2f32",
+      "instance_id": "2cfbc591-a409-45bb-a74c-25b36b11cd6b",
+      "port_id": "i",
       "kind": "component_port"
     },
     {
-      "id": "82c3b1dc-9163-40a8-b9cc-e84b126e56b5",
-      "instance_id": "3d164ce9-37f0-43b2-8235-ea0ffc9a5765",
-      "port_id": "R",
+      "id": "101e503a-777c-43dc-a7ce-7f7cf1897c21",
+      "instance_id": "2cfbc591-a409-45bb-a74c-25b36b11cd6b",
+      "port_id": "o",
       "kind": "component_port"
     },
     {
-      "id": "abcbcdf6-72d1-46dd-bd1a-bf38661da52b",
-      "instance_id": "3d164ce9-37f0-43b2-8235-ea0ffc9a5765",
-      "port_id": "C1",
+      "id": "d4edc81d-888e-4775-bfca-8254ce63c8bd",
+      "instance_id": "5a60fcd8-7779-4104-9256-74adc141459d",
+      "port_id": "i",
       "kind": "component_port"
     },
     {
-      "id": "0e9fab91-3951-4c03-abb8-35f851c2c15c",
-      "instance_id": "3d164ce9-37f0-43b2-8235-ea0ffc9a5765",
-      "port_id": "C2",
+      "id": "5c5eefea-3260-46a0-9198-e750ccc4bc98",
+      "instance_id": "5a60fcd8-7779-4104-9256-74adc141459d",
+      "port_id": "o",
       "kind": "component_port"
     },
     {
-      "id": "a7090629-4e20-4f72-b4b1-84cca28236de",
-      "instance_id": "47090898-8e3a-45e0-b4d1-59ab2af9981e",
-      "port_id": "IN",
-      "kind": "component_port"
-    },
-    {
-      "id": "dc1e0c76-7178-4ea8-93c4-a2bf192d150b",
-      "instance_id": "47090898-8e3a-45e0-b4d1-59ab2af9981e",
-      "port_id": "OUT",
-      "kind": "component_port"
-    },
-    {
-      "id": "b26a7a01-018a-4b22-8bf8-690519bdc319",
-      "instance_id": "fd0d6ff1-9a72-48d4-9cdd-f01bc081e15d",
+      "id": "27d02cac-143e-4067-bd1c-21f378e25998",
+      "instance_id": "ca275ed2-7bd9-4d2e-9aab-f6cc81b7c70e",
       "port_id": "LEFT",
       "kind": "junction"
     },
     {
-      "id": "ee0b074c-d332-49b9-9810-1fdfbbf3369e",
-      "instance_id": "fd0d6ff1-9a72-48d4-9cdd-f01bc081e15d",
+      "id": "7418fd68-d823-4f4b-a64f-521c153a1ff3",
+      "instance_id": "ca275ed2-7bd9-4d2e-9aab-f6cc81b7c70e",
       "port_id": "RIGHT",
       "kind": "junction"
     },
     {
-      "id": "40af1030-e39c-4608-972f-8505a7e75146",
-      "instance_id": "fd0d6ff1-9a72-48d4-9cdd-f01bc081e15d",
-      "port_id": "BOTTOM",
-      "kind": "junction"
-    },
-    {
-      "id": "4db089ac-64e6-4a7f-bbf0-b377e9bd30b2",
-      "instance_id": "d27eacea-8aed-42a1-9c49-e6bbdbeceafe",
-      "port_id": "LEFT",
-      "kind": "junction"
-    },
-    {
-      "id": "0e79d5a3-929d-47d5-b76d-650f9b9c6476",
-      "instance_id": "d27eacea-8aed-42a1-9c49-e6bbdbeceafe",
-      "port_id": "RIGHT",
-      "kind": "junction"
-    },
-    {
-      "id": "3569d9b9-ed2f-42b7-98a3-5a25b5538b0d",
-      "instance_id": "d27eacea-8aed-42a1-9c49-e6bbdbeceafe",
+      "id": "b0283719-6b47-4ea0-b883-c857872d00da",
+      "instance_id": "ca275ed2-7bd9-4d2e-9aab-f6cc81b7c70e",
       "port_id": "BOTTOM",
       "kind": "junction"
     }
   ],
   "connections": [
     {
-      "from_node_id": "426cabdc-6023-4786-a331-dbf92110649a",
-      "to_node_id": "b26a7a01-018a-4b22-8bf8-690519bdc319",
-      "id": "3acae8b9-fe18-43dc-a588-f1ff797fa9b2",
-      "from_component_instance_id": "3069fb0a-6d17-4cbf-99c0-26d4b32262bd",
+      "from_node_id": "0a40e9d4-d494-4fb6-a410-f4608e9ecd2c",
+      "to_node_id": "426cabdc-6023-4786-a331-dbf92110649a",
+      "id": "6d529574-0987-4906-bd52-20e81e0e9a22",
+      "from_component_instance_id": "bbe023dc-5c42-4985-8563-b3ddfc8985bb",
       "from_port_id": "port",
-      "to_component_instance_id": "fd0d6ff1-9a72-48d4-9cdd-f01bc081e15d",
-      "to_port_id": "LEFT",
+      "to_component_instance_id": "3069fb0a-6d17-4cbf-99c0-26d4b32262bd",
+      "to_port_id": "port",
       "schematic_geometry": {
         "points": [
           [
-            -340.0,
-            -80.0
+            316.63502800076463,
+            12.17665615141955
           ],
           [
-            -320.0,
-            -80.0
+            296.63502800076463,
+            12.17665615141955
           ],
           [
-            -280.0,
-            -80.0
+            214.0835268929896,
+            12.17665615141955
           ],
           [
-            -240.0,
-            -80.0
+            131.53202578521456,
+            12.17665615141955
           ],
           [
-            -220.0,
-            -80.0
+            111.53202578521456,
+            12.17665615141955
           ]
         ],
         "controls": []
       }
     },
     {
-      "from_node_id": "ee0b074c-d332-49b9-9810-1fdfbbf3369e",
-      "to_node_id": "abcbcdf6-72d1-46dd-bd1a-bf38661da52b",
-      "id": "3f44e173-40e6-4aef-b9ec-41c4a7e3ac6f",
-      "from_component_instance_id": "fd0d6ff1-9a72-48d4-9cdd-f01bc081e15d",
-      "from_port_id": "RIGHT",
-      "to_component_instance_id": "3d164ce9-37f0-43b2-8235-ea0ffc9a5765",
-      "to_port_id": "C1",
-      "schematic_geometry": {
-        "points": [
-          [
-            -180.0,
-            -80.0
-          ],
-          [
-            -160.0,
-            -80.0
-          ],
-          [
-            -120,
-            -80
-          ],
-          [
-            -120,
-            -100
-          ],
-          [
-            -75.0,
-            -100.0
-          ],
-          [
-            -55.0,
-            -100.0
-          ]
-        ],
-        "controls": [
-          [
-            -120,
-            -80
-          ],
-          [
-            -120,
-            -100
-          ]
-        ]
-      }
-    },
-    {
-      "from_node_id": "40af1030-e39c-4608-972f-8505a7e75146",
-      "to_node_id": "a7090629-4e20-4f72-b4b1-84cca28236de",
-      "id": "b2873208-b698-4a70-a150-9c24aadaf6e5",
-      "from_component_instance_id": "fd0d6ff1-9a72-48d4-9cdd-f01bc081e15d",
-      "from_port_id": "BOTTOM",
-      "to_component_instance_id": "47090898-8e3a-45e0-b4d1-59ab2af9981e",
-      "to_port_id": "IN",
-      "schematic_geometry": {
-        "points": [
-          [
-            -200.0,
-            -60.0
-          ],
-          [
-            -200.0,
-            -40.0
-          ],
-          [
-            -200,
-            240
-          ],
-          [
-            120,
-            240
-          ],
-          [
-            120,
-            100
-          ],
-          [
-            -100,
-            100
-          ],
-          [
-            -100,
-            160
-          ],
-          [
-            -75.0,
-            160.0
-          ],
-          [
-            -55.0,
-            160.0
-          ]
-        ],
-        "controls": [
-          [
-            -200,
-            240
-          ],
-          [
-            120,
-            240
-          ],
-          [
-            120,
-            100
-          ],
-          [
-            -100,
-            100
-          ],
-          [
-            -100,
-            160
-          ]
-        ]
-      }
-    },
-    {
-      "from_node_id": "dc1e0c76-7178-4ea8-93c4-a2bf192d150b",
-      "to_node_id": "0e79d5a3-929d-47d5-b76d-650f9b9c6476",
-      "id": "bf24191a-fdc2-45ff-8a22-f5f3a808651f",
-      "from_component_instance_id": "47090898-8e3a-45e0-b4d1-59ab2af9981e",
-      "from_port_id": "OUT",
-      "to_component_instance_id": "d27eacea-8aed-42a1-9c49-e6bbdbeceafe",
-      "to_port_id": "RIGHT",
-      "schematic_geometry": {
-        "points": [
-          [
-            55.0,
-            160.0
-          ],
-          [
-            75.0,
-            160.0
-          ],
-          [
-            150,
-            160
-          ],
-          [
-            200.0,
-            160.0
-          ],
-          [
-            220.0,
-            160.0
-          ]
-        ],
-        "controls": [
-          [
-            150,
-            160
-          ]
-        ]
-      }
-    },
-    {
-      "from_node_id": "82c3b1dc-9163-40a8-b9cc-e84b126e56b5",
-      "to_node_id": "3569d9b9-ed2f-42b7-98a3-5a25b5538b0d",
-      "id": "63a1fedf-306d-4998-bc56-f3a5a4de1eec",
-      "from_component_instance_id": "3d164ce9-37f0-43b2-8235-ea0ffc9a5765",
-      "from_port_id": "R",
-      "to_component_instance_id": "d27eacea-8aed-42a1-9c49-e6bbdbeceafe",
-      "to_port_id": "BOTTOM",
-      "schematic_geometry": {
-        "points": [
-          [
-            0.0,
-            -62.0
-          ],
-          [
-            0.0,
-            -42.0
-          ],
-          [
-            0,
-            300
-          ],
-          [
-            300,
-            300
-          ],
-          [
-            300,
-            80
-          ],
-          [
-            240,
-            80
-          ],
-          [
-            240,
-            120
-          ],
-          [
-            240.0,
-            140.0
-          ]
-        ],
-        "controls": [
-          [
-            0,
-            300
-          ],
-          [
-            300,
-            300
-          ],
-          [
-            300,
-            80
-          ],
-          [
-            240,
-            80
-          ],
-          [
-            240,
-            120
-          ]
-        ]
-      }
-    },
-    {
-      "from_node_id": "4db089ac-64e6-4a7f-bbf0-b377e9bd30b2",
-      "to_node_id": "0a40e9d4-d494-4fb6-a410-f4608e9ecd2c",
-      "id": "f1f1b2e9-7c49-4d41-bf2a-4bfc49bcf968",
-      "from_component_instance_id": "d27eacea-8aed-42a1-9c49-e6bbdbeceafe",
-      "from_port_id": "LEFT",
-      "to_component_instance_id": "bbe023dc-5c42-4985-8563-b3ddfc8985bb",
+      "from_node_id": "101e503a-777c-43dc-a7ce-7f7cf1897c21",
+      "to_node_id": "4dfbaf95-259c-437a-a7e3-5aed2c7fbd50",
+      "id": "869d0a8f-a415-4e78-b23f-15c1a09166fc",
+      "from_component_instance_id": "2cfbc591-a409-45bb-a74c-25b36b11cd6b",
+      "from_port_id": "o",
+      "to_component_instance_id": "3b49b0ef-94c3-4ab1-9458-8a316ae555dc",
       "to_port_id": "port",
       "schematic_geometry": {
         "points": [
           [
-            260.0,
-            160.0
+            306.32258949389654,
+            319.3169661226168
           ],
           [
-            280.0,
-            160.0
+            326.32258949389654,
+            319.3169661226168
           ],
           [
-            320,
-            160
+            326.32258949389654,
+            319.2250348154398
           ],
           [
-            380.0,
-            160.0
+            403.5136768609173,
+            319.2250348154398
           ],
           [
-            400.0,
-            160.0
+            403.5136768609173,
+            339.2250348154398
+          ]
+        ],
+        "controls": []
+      }
+    },
+    {
+      "from_node_id": "7418fd68-d823-4f4b-a64f-521c153a1ff3",
+      "to_node_id": "d4edc81d-888e-4775-bfca-8254ce63c8bd",
+      "id": "a1ad9f6c-ecae-4d4f-9350-a98ee51bb1a7",
+      "from_component_instance_id": "ca275ed2-7bd9-4d2e-9aab-f6cc81b7c70e",
+      "from_port_id": "RIGHT",
+      "to_component_instance_id": "5a60fcd8-7779-4104-9256-74adc141459d",
+      "to_port_id": "i",
+      "schematic_geometry": {
+        "points": [
+          [
+            30.322589493896572,
+            184.3533123028391
+          ],
+          [
+            50.32258949389657,
+            184.3533123028391
+          ],
+          [
+            74.40707721848851,
+            184.3533123028391
+          ],
+          [
+            98.49156494308045,
+            184.3533123028391
+          ],
+          [
+            118.49156494308045,
+            184.3533123028391
+          ]
+        ],
+        "controls": []
+      }
+    },
+    {
+      "from_node_id": "b0283719-6b47-4ea0-b883-c857872d00da",
+      "to_node_id": "effa9c11-6343-41a2-874a-8901f1db2f32",
+      "id": "cdd81289-800b-47bf-bbe1-06160ca23d36",
+      "from_component_instance_id": "ca275ed2-7bd9-4d2e-9aab-f6cc81b7c70e",
+      "from_port_id": "BOTTOM",
+      "to_component_instance_id": "2cfbc591-a409-45bb-a74c-25b36b11cd6b",
+      "to_port_id": "i",
+      "schematic_geometry": {
+        "points": [
+          [
+            10.322589493896572,
+            204.3533123028391
+          ],
+          [
+            10.322589493896572,
+            224.3533123028391
+          ],
+          [
+            10.322589493896572,
+            319.3169661226168
+          ],
+          [
+            30.322589493896572,
+            319.3169661226168
+          ]
+        ],
+        "controls": []
+      }
+    },
+    {
+      "from_node_id": "331d12e3-21f9-40fb-890f-9749efb80f4d",
+      "to_node_id": "27d02cac-143e-4067-bd1c-21f378e25998",
+      "id": "204ace2f-fa55-4ca0-a707-48eff54bbb1b",
+      "from_component_instance_id": "c62e7c9b-268a-4c5d-b31b-261fece02652",
+      "from_port_id": "port",
+      "to_component_instance_id": "ca275ed2-7bd9-4d2e-9aab-f6cc81b7c70e",
+      "to_port_id": "LEFT",
+      "schematic_geometry": {
+        "points": [
+          [
+            -70.84076258400758,
+            184.35331230283916
+          ],
+          [
+            -50.84076258400758,
+            184.35331230283916
+          ],
+          [
+            -40.2590865450555,
+            184.35331230283916
+          ],
+          [
+            -40.2590865450555,
+            184.3533123028391
+          ],
+          [
+            -29.677410506103428,
+            184.3533123028391
+          ],
+          [
+            -9.677410506103428,
+            184.3533123028391
+          ]
+        ],
+        "controls": []
+      }
+    },
+    {
+      "from_node_id": "5c5eefea-3260-46a0-9198-e750ccc4bc98",
+      "to_node_id": "6170d5cb-7e6b-4afe-ae4d-df196c471a20",
+      "id": "fef2833f-dca4-44aa-85ec-eeed1cc31941",
+      "from_component_instance_id": "5a60fcd8-7779-4104-9256-74adc141459d",
+      "from_port_id": "o",
+      "to_component_instance_id": "f10c260d-3757-4e44-8351-bb9dfe7af5df",
+      "to_port_id": "port",
+      "schematic_geometry": {
+        "points": [
+          [
+            394.49156494308045,
+            184.3533123028391
+          ],
+          [
+            414.49156494308045,
+            184.3533123028391
+          ],
+          [
+            414.49156494308045,
+            184.72870575653354
+          ],
+          [
+            483.0013029762722,
+            184.72870575653354
+          ],
+          [
+            483.0013029762722,
+            259.2401591002606
+          ],
+          [
+            483.0013029762723,
+            259.2401591002606
+          ],
+          [
+            483.0013029762723,
+            279.2401591002606
           ]
         ],
         "controls": [
           [
-            320,
-            160
+            414.49156494308045,
+            184.3533123028391
+          ],
+          [
+            414.49156494308045,
+            184.72870575653354
+          ],
+          [
+            483.0013029762722,
+            184.72870575653354
+          ],
+          [
+            483.0013029762722,
+            259.2401591002606
+          ],
+          [
+            483.0013029762723,
+            259.2401591002606
           ]
         ]
       }
     }
   ],
   "junctions": [
-    "b26a7a01-018a-4b22-8bf8-690519bdc319",
-    "ee0b074c-d332-49b9-9810-1fdfbbf3369e",
-    "40af1030-e39c-4608-972f-8505a7e75146",
-    "4db089ac-64e6-4a7f-bbf0-b377e9bd30b2",
-    "0e79d5a3-929d-47d5-b76d-650f9b9c6476",
-    "3569d9b9-ed2f-42b7-98a3-5a25b5538b0d"
+    "27d02cac-143e-4067-bd1c-21f378e25998",
+    "7418fd68-d823-4f4b-a64f-521c153a1ff3",
+    "b0283719-6b47-4ea0-b883-c857872d00da"
   ]
 }

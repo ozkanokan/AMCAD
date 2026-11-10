@@ -17,6 +17,9 @@ Visualization uses PySide6 software rendering; no new dependencies are required.
 
 ## Setup and run
 
+For ZIP delivery, recovered local topology work, and native Rhino integration
+limits, see [source handoff notes](docs/source-handoff.md).
+
 The target is **Python 3.14.4**, pinned in `.python-version`. Dependencies are
 PySide6 6.11.2 and pytest 9.1.1. Run from the repository root.
 

@@ -1020,7 +1020,7 @@
             }
           },
           {
-            "z": 40.988,
+            "z": 45.988,
             "r": 4.7625,
             "id": "19413ef7-102c-4798-a872-ccbe66fbed6d",
             "corner": {
@@ -1031,7 +1031,7 @@
             }
           },
           {
-            "z": 41.9405,
+            "z": 46.9405,
             "r": 3.81,
             "id": "7a125cb5-e2d3-4bcf-8d94-b30c51bfb518",
             "corner": {
@@ -1042,7 +1042,7 @@
             }
           },
           {
-            "z": 44.544,
+            "z": 49.544,
             "r": 3.81,
             "id": "d25d10b6-45ad-49bf-8e44-84e942686b66",
             "corner": {
@@ -1053,7 +1053,7 @@
             }
           },
           {
-            "z": 44.544,
+            "z": 49.544,
             "r": 0,
             "id": "26f0fb75-1ffd-4565-9524-3daee9490f69",
             "corner": {
@@ -1108,7 +1108,7 @@
         {
           "hydraulic_port_id": "88ebf400-b344-4cee-9fbc-5630a19581f1",
           "interface_type": "SURFACE",
-          "z_mm": 4.915080606076066,
+          "z_mm": 9.973104095987553,
           "r_mm": 4.7625,
           "nominal_connection_diameter_mm": 4,
           "preferred_direction": "UNSPECIFIED",
@@ -1117,7 +1117,7 @@
             "kind": "LINE",
             "vertex_id": "aad319b3-85bd-4b3c-8a5d-1b4c8d0c1d30",
             "next_vertex_id": "19413ef7-102c-4798-a872-ccbe66fbed6d",
-            "t": 0.12,
+            "t": 0.217,
             "angle_deg": 0.0
           },
           "direction": [
@@ -1138,7 +1138,7 @@
         }
       ],
       "id": "4fa82fc5-80ae-4424-81c3-f9c2dcc11f95",
-      "revision": 4,
+      "revision": 5,
       "geometry_type": "REVOLVED_PROFILE",
       "description": "",
       "port_count": 2

@@ -18,8 +18,8 @@ so the editor can import it. Other common files differed only in line endings.
 Git metadata and generated Python caches were excluded.
 
 The local sample includes a revised cavity profile and interface placement.
-Existing exported sample graphs were retained as supplied; regenerate exports
-from the project if fresh geometry is required.
+The hydraulic graph for `c1_r` has since been regenerated from the current
+project using the existing exporter. See the root README for its current topology.
 
 ## Rhino/Grasshopper limits
 
@@ -28,13 +28,14 @@ files contain embedded scripts, including machine-specific paths. Change those
 paths to the extracted `integrations/grasshopper` directory. Restart Rhino
 after replacing Python modules to avoid stale imports.
 
-The recovered editor uses a read-only SVG overview and draft edits published
-only on Save. Its additional-port workflow requires a `state['cavities']`
-mapping from instance IDs to placed Rhino Breps. The checked-in Phase 4 embedded
-topology component does not populate that mapping: adding physical ports needs
-native integration work before it is usable there. Existing topology editing
-can be reviewed separately. Do not assume the uploaded ZIP contained a newer
-Grasshopper definition; its `.ghx` files matched main.
+The recovered downstream editor uses a read-only SVG overview and draft edits
+published only on Save. Its additional-port workflow expects a runtime
+`state['cavities']` mapping from instance IDs to placed Rhino Breps; the included
+Phase 4 component's state initializer omits that key. This is a static observation
+about that component/module combination, not an AMCAD assignment/export defect
+or a reproduced failure of the user's working Rhino session. The uploaded ZIP's
+`.ghx` files matched main. Downstream runtime investigation is outside AMCAD's
+standalone design-to-JSON responsibility.
 
 Native Rhino UI, picking, and downstream solver execution require validation in
 Rhino; Python-only checks cannot certify them. The optional diagram helper is
@@ -42,12 +43,19 @@ retained from the local ZIP even though the current editor uses the SVG helper.
 Windows executable packaging remains on `feature/windows-packaging` and is
 not part of this source handoff branch.
 
-## Validation for reconciliation
+## Validation for source handoff
 
-The existing application suite produced **403 passed, 3 failed**. The three
-failures also reproduce with the original `7924af0` sample: physical demo
-preservation, crossing rendering in `c1_r`, and its historical net topology
-expectations. These existing sample/test mismatches remain unresolved.
-Three additional topology regression tests passed, covering atomic endpoint
-edits, attached-port movement/SVG generation, and draft publication/overwrite
-protection. Native Rhino behavior was not tested in this environment.
+The complete suite passed **409 tests**, including the three topology tests
+added during ZIP reconciliation. The former three sample-expectation failures
+are corrected without changing application behavior: the historical generator
+still exercises crossings and legacy topology; the current sample has explicit
+topology, preservation, export and round-trip checks. The shipped `c1_r` graph
+matches the current project. All seven sample projects passed save/load and
+export round trips and offscreen application launches. All five stored hydraulic
+graphs match their source projects, and both stored Grasshopper exports match
+their source project/generator; associated placement JSON also validates.
+Native Rhino behavior is outside this validation.
+
+Keep the editable project alongside exports. The three JSON contracts and
+existing incomplete-design/physical-exclusion behavior are documented in
+[project-format.md](project-format.md#export-boundary-and-contract-selection).

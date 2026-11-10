@@ -86,7 +86,7 @@ selection, preview, clipboard and undo history are session-only state.
 | `routing_connections` | Explicit instance/port references and node UUIDs; no visual geometry |
 | `component_internal_relationships` | Instance UUID, node UUID endpoints, relationship type |
 
-Port labels are INSTANCE.PORT_ID; external interface labels are bare instance
+Port labels are INSTANCE.DISPLAY_NAME; external interface labels are bare instance
 names. IDs are authoritative. Routing edges have `requires_routing: true` and
 `direction_semantics: "connectivity_only"`; their endpoint order is not simulated
 flow. Internal relationships have no routing flag. Consumers apply internal
@@ -111,12 +111,14 @@ junction ports, invalid endpoints and duplicate records are rejected.
 
 Old lines receive initial orthogonal geometry and all old ports default to
 Required unless already marked Optional. Opening never rewrites files. Saving
-writes version 5. This migration is limited to old files: the editing UI never
+writes version 7. This migration is limited to old files: the editing UI never
 automatically inserts junctions or branches on line clicks.
 
-The original project is preserved in `tests/fixtures/c1_r.v1.json`; the current
-sample in `examples/` uses explicit supply/return junctions, manual controls and
-crossing jumps without changing its historical hydraulic terminal nets.
+The original project is preserved in `tests/fixtures/c1_r.v1.json`.
+`examples.create_demo.create_demo()` constructs the historical explicit-junction
+and crossing demonstrator for regression tests. The current
+`examples/c1_r.amcad.json` is a different, user-authored physical-library example;
+its matching `c1_r.graph.json` is generated from that project with `save_graph`.
 
 ## V1.5 cavities and legacy archives
 
@@ -158,3 +160,62 @@ cavity revisions. Startup only reads files. Display annotations/thumbnails are
 derived and are not authoritative stored geometry. Graph nodes include readable
 `display_label`; `label` uses instance display labels for component ports and
 the instance name for external terminals. Logical `port_id` remains authoritative.
+
+## Export boundary and contract selection
+
+AMCAD is a standalone hydraulic architecture design application. Its final
+responsibility is generating consistent Grasshopper JSON. Rhino geometry,
+physical placement, Grasshopper execution and runtime mappings are downstream.
+
+| Contract | Version | Purpose |
+| --- | --- | --- |
+| `amcad.project` | 7 | Editable source: full component/port definitions, instance identities, schematic positions and line geometry, cavity snapshots, assignments and connectivity |
+| `amcad.hydraulic_graph` | 7 | Full hydraulic architecture interchange: definitions, instance/port identities and semantics, cavity assignments, logical edges and internal relationships; no schematic line geometry |
+| `amcad.grasshopper` | 1 | Physical handoff: assigned cavity instances, local exact profile/interface geometry, mappings, original connectivity and derived nets |
+
+Keep the project for continued editing. The Grasshopper export is not a lossless
+project archive: it omits component-definition IDs and full schematic-port
+attributes such as flow direction, required/optional status and symbol sides.
+Use the project or hydraulic graph when those fields are needed.
+
+The Grasshopper exporter (`core/grasshopper_export.py`) validates a project copy.
+It exports cavity IDs/revisions, theoretical vertices and corner treatments,
+derived line/arc segments, interface IDs/source metadata, local positions,
+directions, CIRCLE/SLOT/RECTANGLE sections and right-handed section frames.
+Instance records contain IDs/names, cavity IDs/revisions and complete one-to-one
+schematic-port-to-interface mappings. Units are millimeters. Schematic x/y and
+rotation are deliberately absent; physical placement is downstream-owned.
+
+Connectivity retains every original node and edge with stable IDs and
+instance/port references, plus internal relationships. Only explicit edges and
+`JUNCTION` relationships merge nets; valve relationships remain separate.
+Net IDs derive from project/node IDs. Physical terminal identity is the pair
+`instance_id` + `interface_id`, even when instances share a cavity definition.
+The pure-Python `validate_export` in
+`integrations/grasshopper/amcad_runtime.py` checks the output before writing;
+it requires no Rhino or Qt runtime. The JSON writer rejects nonfinite numbers
+and atomically replaces its target. Grasshopper export also rejects attempts
+to overwrite existing unrelated JSON formats.
+
+## Incomplete designs and physical exclusions
+
+Structural validity does not require every required port to be connected.
+Unconnected required ports mark a component incomplete; optional ports do not.
+Incomplete designs can still be saved and exported. There is no export-readiness
+gate or completeness field in the Grasshopper JSON; isolated nodes remain in nets.
+
+An instance without an independent `cavity_ref` has no physical instance entry.
+It is listed in `excluded_instances` with its ID, name and reason. Its original
+nodes/edges and relationships remain in connectivity with null physical terminals.
+Unassigned non-junction nodes are listed as net boundaries; unassigned junction
+nodes still participate in net merging. This is explicit exclusion, not an error.
+An export may validly contain zero physical instances.
+
+Legacy embedded component geometry is preserved in project/graph data but is
+not automatically assigned or included as Grasshopper cavity geometry. Import,
+repair and assign it explicitly in AMCAD when physical export is intended.
+The older `parallel_check_valves*` samples demonstrate this legacy state.
+Malformed assignments, missing snapshots, invalid anchors, nonfinite geometry
+or inconsistent references are rejected rather than silently excluded.
+Export success does not certify that all intended physical instances were assigned;
+review `excluded_instances` and boundaries before downstream use.

@@ -16,6 +16,7 @@ from core.line_geometry import crossing_points, endpoint, normalize
 from core.geometry import SIDE_VECTORS, LEAD_LENGTH
 from ui.main_window import MainWindow
 from ui.node_wizard import NodeWizard
+from examples.create_demo import create_demo
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -151,7 +152,10 @@ def test_manual_controls_survive_movement_and_rotation(tmp_path,degrees):
 
 
 def test_crossings_are_render_only_deterministic_and_survive_sample_reopen(qapp,tmp_path):
-    sample=ROOT/'examples/c1_r.amcad.json'
+    # The historical demonstrator deliberately crosses lines; the current
+    # user-authored sample has a different layout. Never regenerate it here.
+    sample=tmp_path/'crossing-demo.amcad.json'
+    create_demo().save(sample)
     p=Project.load(sample); before=export_graph(p); objects=(len(p.nodes),len(p.connections),len(p.instances))
     lines={c.id:c.schematic_geometry['points'] for c in p.connections.values()}
     crossings=crossing_points(lines)
@@ -195,10 +199,19 @@ def test_sample_net_topology_and_legacy_migration_required_defaults(tmp_path):
     expected={frozenset(['C1','EHSV1.C1','RV1.IN']),frozenset(['R','EHSV1.R','RV1.OUT']),
               frozenset(['EHSV1.P']),frozenset(['EHSV1.C2'])}
     assert terminal_nets(export_graph(p))==expected
+    historical=create_demo()
+    assert terminal_nets(export_graph(historical))==expected
+    assert all(d.physical.cavity_type=='NONE' for d in historical.definitions.values())
+    assert all(historical.is_complete(i.id) for i in historical.instances.values())
     current=Project.load(ROOT/'examples/c1_r.amcad.json')
-    assert terminal_nets(export_graph(current))==expected
+    current_expected={frozenset(['P','Lee FCFA375-1.IN','Lee FCFA375-2.IN']),
+                      frozenset(['EXT1','Lee FCFA375-1.OUT']),
+                      frozenset(['EXT2','Lee FCFA375-2.OUT']),frozenset(['R','RET'])}
+    assert terminal_nets(export_graph(current))==current_expected
     assert all(current.is_complete(i.id) for i in current.instances.values())
     assert export_graph(current)==json.loads((ROOT/'examples/c1_r.graph.json').read_text())
+    current.save(tmp_path/'current.json')
+    assert export_graph(Project.load(tmp_path/'current.json'))==export_graph(current)
     assert all(sum(n.id in (c.from_node_id,c.to_node_id) for c in p.connections.values())<=1 for n in p.nodes.values())
 
 

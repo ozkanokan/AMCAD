@@ -48,8 +48,10 @@ QT_QPA_PLATFORM=offscreen python -m pytest -q
 QT_QPA_PLATFORM=offscreen python -m app.main examples/c1_r.amcad.json --smoke
 ```
 
-All **406 tests** and all five sample application launch checks pass on Python 3.14.4 under
-Linux. Tests exercise the wizard, drag/drop, manual drawing, segment and bend
+Handoff validation passed **409 tests**, all seven sample project round trips
+and offscreen launches, five stored hydraulic graph comparisons and both shipped
+Grasshopper export comparisons on Python 3.14.4 under Linux.
+Tests exercise the wizard, drag/drop, manual drawing, segment and bend
 drags, rotation, single-line occupancy, geometry persistence, undo/redo,
 copy/paste, legacy migration, completeness, crossings and graph export. Cavity tests cover
 point editing, snap, exact corner features, validation, port mappings, shared
@@ -299,22 +301,37 @@ python -m examples.create_physical_demo
 
 ## C1–R sample
 
-Open [the project](examples/c1_r.amcad.json) to see six instances, fourteen port
-nodes, two explicit 3-Way Junctions, six manually arranged routing lines and five
-internal relationships (four junction links and one relief-valve relationship).
+Open [the project](examples/c1_r.amcad.json) to see eight instances, twelve port
+nodes, one explicit 3-Way Junction and six routing lines. Seven instances have
+independent cavity assignments referencing four project cavity snapshots.
 The [graph export](examples/c1_r.graph.json) records the same connectivity.
 
-- Supply branch: C1.port ↔ J1.LEFT, J1.RIGHT ↔ EHSV1.C1,
-  J1.BOTTOM ↔ RV1.IN.
-- Return branch: EHSV1.R ↔ J2.BOTTOM, RV1.OUT ↔ J2.RIGHT,
-  J2.LEFT ↔ R.port. J2 is rotated 180 degrees in the sample.
-- EHSV1.P and EHSV1.C2 are intentionally Optional and unconnected.
-- Manual controls deliberately create crossings to demonstrate jump rendering.
+- Supply net: P, Lee FCFA375-1.IN and Lee FCFA375-2.IN, joined through J1.
+- Outlet nets: Lee FCFA375-1.OUT with EXT1; Lee FCFA375-2.OUT with EXT2.
+- Return net: R with RET.
+- J1 is unassigned physically and still merges connectivity through its junction
+  relationships. Every instance is complete under the required-port rules.
 
-Adding J2 replaces the historical implicit branch at R; the original hydraulic
-nets are unchanged. `python -m examples.create_demo` regenerates both examples.
-The original V1 project is retained under `tests/fixtures/c1_r.v1.json` to validate
-backward compatibility.
+The historical C1/EHSV/RV crossing demonstrator remains available through
+`examples.create_demo.create_demo()` and is used by regression tests. Running
+`python -m examples.create_demo` overwrites the current project and graph with
+that older demonstrator; it does not reproduce this user-authored sample.
+The original V1 project remains in `tests/fixtures/c1_r.v1.json` for compatibility.
+
+## AMCAD export boundary
+
+AMCAD ends at consistent JSON generation; Rhino/Grasshopper geometry execution
+and physical placement are downstream workflows. The editable `amcad.project`
+and hydraulic graph formats are version **7**; `amcad.grasshopper` is version **1**.
+The project preserves the complete editable design, the hydraulic graph carries
+full component/port semantics, and Grasshopper JSON carries assigned cavity
+geometry plus connectivity. It is not a project backup.
+
+Incomplete designs remain saveable/exportable. Instances without independent
+cavity assignments are explicitly excluded from physical geometry while their
+connectivity remains; legacy embedded geometry is not automatically assigned.
+Review exclusions and boundaries before downstream use. See
+[export contracts and completeness rules](docs/project-format.md#export-boundary-and-contract-selection).
 
 ## Architecture and persistence
 

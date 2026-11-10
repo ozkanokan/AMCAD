@@ -120,6 +120,9 @@ def test_wizard_integrates_cavity_and_library_reopen(qapp,tmp_path):
 
 
 def test_physical_demo_launch_graph_and_existing_c1_r_preserved(qapp,tmp_path):
+    sample=ROOT/'examples/c1_r.amcad.json'
+    source_bytes=sample.read_bytes()
+    original=Project.load(sample); original_data=original.to_dict()
     demo=ROOT/'examples/parallel_check_valves.amcad.json'
     p=Project.load(demo)
     assert len(p.instances)==6 and len(p.nodes)==10 and len(p.connections)==5
@@ -134,7 +137,9 @@ def test_physical_demo_launch_graph_and_existing_c1_r_preserved(qapp,tmp_path):
     assert sum(d['physical']['cavity_type']=='REVOLVED_PROFILE' for d in export_graph(p)['component_definitions'])==1
     w=MainWindow(tmp_path/'library'); w.load_path(demo); w.show(); qapp.processEvents()
     w.grab().save('/tmp/amcad-physical-demo-v13.png'); w.close()
-    original=Project.load(ROOT/'examples/c1_r.amcad.json')
-    assert len(original.connections)==6 and all(d.physical.cavity_type=='NONE' for d in original.definitions.values())
+    assert sample.read_bytes()==source_bytes
+    assert Project.load(sample).to_dict()==original_data
+    assert len(original.connections)==6 and len(original.instances)==8
+    assert len(original.cavities)==4 and sum(bool(i.cavity_ref) for i in original.instances.values())==7
     original.save(tmp_path/'c1.json')
-    assert Project.load(tmp_path/'c1.json').to_dict()==original.to_dict()
+    assert Project.load(tmp_path/'c1.json').to_dict()==original_data

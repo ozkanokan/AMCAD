@@ -57,8 +57,19 @@ a non-English default locale.
 V1.4–V1.4b tests cover revolved coordinates/open ends, surface picking, stable anchors,
 direction normalization, section frames/rotation, channel geometry, invalid-anchor
 recovery, synchronized selection, dark-theme contrast and JSON round trips.
-`--smoke` renders the actual window and exits. Native Windows/macOS displays and
-executable packaging have not been validated.
+`--smoke` renders the actual window and exits. Native Windows/macOS displays
+remain unvalidated; packaging checks and limits are documented below.
+
+## Windows executable (onedir)
+
+Run `build_exe.bat` on Windows x64 with Python **3.14.4** installed. It creates
+an isolated build environment and produces `dist/AMCAD/AMCAD.exe` using the
+checked-in `AMCAD.spec`. Distribute the **whole `dist/AMCAD` folder**, including
+`_internal`; the receiving PC does not need Python or Rhino. Editable libraries
+remain in the user's application-data folder, and frozen launches use a writable
+Documents/AMCAD working directory. Existing source launches are unchanged.
+
+See [build instructions, packaging risks and Windows acceptance checks](docs/windows-build.md).
 
 ## Editing
 

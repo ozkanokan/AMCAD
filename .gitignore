@@ -1,7 +1,9 @@
 .venv/
+.venv-build/
 __pycache__/
 .pytest_cache/
 *.pyc
 build/
 dist/
 *.spec
+!AMCAD.spec
